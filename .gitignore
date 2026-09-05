@@ -1,0 +1,89 @@
+# ──────────────────────────────────────────────────────────────
+#  Interval Timer — .gitignore
+#  .NET / WinUI 3 / classic UWP / Visual Studio, plus Python tooling.
+#
+#  The generated assets ARE committed on purpose so the projects build
+#  without running Python:
+#    IntervalTimer*/Assets/**/*.wav
+#    IntervalTimer*/Assets/*.png
+#    IntervalTimerOverlay/Assets/app.ico
+#  They are NOT ignored below.
+# ──────────────────────────────────────────────────────────────
+
+## Build output
+[Bb]in/
+[Oo]bj/
+publish/
+*.log
+
+## Visual Studio / MSBuild
+.vs/
+*.user
+*.suo
+*.rsuser
+*.userosscache
+*.sln.docstates
+*.ilk
+*.pdb
+*.tlog
+*.binlog
+
+## MSIX / AppX packaging output
+AppPackages/
+BundleArtifacts/
+GeneratedArtifacts/
+_pkginfo.txt
+Package.StoreAssociation.xml
+ModelManifest.xml
+*.appx
+*.appxbundle
+*.appxupload
+*.msix
+*.msixbundle
+*.msixupload
+
+## Signing material (test certs are regenerated on build)
+*.pfx
+*.snk
+*_TemporaryKey.pfx
+
+## NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+
+## Publish profile user overrides (the .pubxml files themselves are tracked)
+*.pubxml.user
+
+## Tests / coverage
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+coverage*/
+
+## Rider / ReSharper
+.idea/
+_ReSharper*/
+*.DotSettings.user
+
+## Python tooling (tools/)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+## OS / editor cruft
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+*.swp
+*~
+*.bak
+*.tmp
+*.orig

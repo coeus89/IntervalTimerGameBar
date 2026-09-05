@@ -1,0 +1,69 @@
+<Page
+    x:Class="IntervalTimerWidget.WidgetPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:IntervalTimerWidget"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="Transparent">
+
+    <Grid Padding="12" RowSpacing="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Countdown + start/stop -->
+        <Grid Grid.Row="0" ColumnSpacing="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBlock x:Name="CountdownText" Grid.Column="0" Text="01:00"
+                       FontSize="40" FontFamily="Consolas" FontWeight="SemiBold"
+                       VerticalAlignment="Center" />
+            <Button x:Name="StartStopButton" Grid.Column="1" Content="Start" MinWidth="80"
+                    VerticalAlignment="Center" Click="OnStartStop" />
+        </Grid>
+
+        <!-- Interval -->
+        <StackPanel Grid.Row="1">
+            <TextBlock Text="Beep every (seconds)" FontSize="12" Opacity="0.7" />
+            <Grid ColumnSpacing="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <RepeatButton Grid.Column="0" Content="&#x2212;" Width="36" Click="OnIntervalDown" />
+                <TextBox x:Name="IntervalBox" Grid.Column="1" Text="60"
+                         InputScope="Number" TextAlignment="Center"
+                         LostFocus="OnIntervalCommitted" KeyDown="OnIntervalKeyDown" />
+                <RepeatButton Grid.Column="2" Content="+" Width="36" Click="OnIntervalUp" />
+            </Grid>
+        </StackPanel>
+
+        <!-- Sound -->
+        <StackPanel Grid.Row="2">
+            <TextBlock Text="Sound" FontSize="12" Opacity="0.7" />
+            <Grid ColumnSpacing="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox x:Name="SoundBox" Grid.Column="0" HorizontalAlignment="Stretch"
+                          SelectionChanged="OnSoundChanged" />
+                <Button Grid.Column="1" Content="Test" Click="OnTestSound" />
+            </Grid>
+        </StackPanel>
+
+        <!-- Volume -->
+        <StackPanel Grid.Row="3">
+            <TextBlock Text="Volume" FontSize="12" Opacity="0.7" />
+            <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" ValueChanged="OnVolumeChanged" />
+        </StackPanel>
+    </Grid>
+</Page>

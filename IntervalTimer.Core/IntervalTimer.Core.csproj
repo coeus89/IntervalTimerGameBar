@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- netstandard2.0 is the common denominator UWP (.NET Native / C# 7.3) and .NET 8+ both consume. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>7.3</LangVersion>
+    <Nullable>disable</Nullable>
+    <RootNamespace>IntervalTimer.Core</RootNamespace>
+    <AssemblyName>IntervalTimer.Core</AssemblyName>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <ProjectGuid>{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}</ProjectGuid>
+  </PropertyGroup>
+
+</Project>

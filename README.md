@@ -1,0 +1,238 @@
+# Interval Timer
+
+A configurable **"beep every X seconds"** timer for gaming, shipped two ways that share one
+timing engine:
+
+- **`IntervalTimerOverlay`** — a standalone always‑on‑top desktop window + system‑tray icon
+  (modern WinUI 3, runs as a plain `.exe`). Does everything: set an interval, pick a sound,
+  it floats over your game and beeps. No pinning, no Game Bar.
+- **`IntervalTimerWidget`** — a real Xbox Game Bar widget (classic UWP). Lives in the `Win+G`
+  overlay; **pin it** to keep it beeping once the overlay is dismissed.
+
+Both are driven by **`IntervalTimer.Core`**, a small drift‑free scheduler.
+
+| Project | Type | In `.sln`? | Build with | Docs |
+| --- | --- | --- | --- | --- |
+| `IntervalTimer.Core` | `netstandard2.0` class lib | ✅ | `dotnet` | [docs/IntervalTimer.Core.md](docs/IntervalTimer.Core.md) |
+| `IntervalTimerOverlay` | WinUI 3 desktop, **unpackaged** | ✅ | `run-overlay.ps1` / VS / `dotnet` | [docs/IntervalTimerOverlay.md](docs/IntervalTimerOverlay.md) |
+| `IntervalTimerWidget` | Classic UWP (.NET Native) | ❌ (see below) | `build-widget.ps1` | [docs/IntervalTimerWidget.md](docs/IntervalTimerWidget.md) |
+| `IntervalTimer.Core.Tests` | xUnit (`net8.0`) | ❌ | `dotnet test` | — |
+
+**System overview:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+
+---
+
+## 1. Prerequisites
+
+### For the overlay + core (everything in the solution)
+
+- **.NET SDK 8+** (`dotnet --version`). .NET 10 SDK is fine.
+- **Windows App SDK 1.6 runtime** on the machine — Visual Studio installs it; a standalone
+  installer is [here](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads).
+  (Not needed if you use `run-overlay.ps1 -Portable` or `install-overlay.ps1`, which bundle it.)
+- Optional: **Visual Studio 2022/2026** with the *WinUI application development* workload for
+  F5 debugging and the XAML designer.
+
+### Extra prerequisites for the Game Bar widget
+
+- **Visual Studio 2026** (or 2022) with the **Universal Windows Platform development** workload
+  (`Microsoft.VisualStudio.Workload.Universal`). This brings the .NET Native compiler, the
+  classic UWP targeting pack, and the UWP MSBuild targets. The widget is built by MSBuild, not
+  `dotnet`.
+
+  ```powershell
+  # elevated shell — one-time
+  & "C:\Program Files (x86)\Microsoft Visual Studio\Installer\setup.exe" modify `
+    --installPath "C:\Program Files\Microsoft Visual Studio\18\Community" `
+    --add Microsoft.VisualStudio.Workload.Universal --includeRecommended --norestart --passive
+  ```
+
+- **Windows 11 SDK 10.0.26100** — must match `<TargetPlatformVersion>` in
+  `IntervalTimerWidget.csproj`.
+
+  ```powershell
+  winget install Microsoft.WindowsSDK.10.0.26100
+  ```
+
+  Do **not** target a newer SDK (e.g. 28000): the .NET 10 SDK only accepts platform versions
+  up to 26100 for UWP, and classic UWP needs that exact version installed on disk.
+
+- **Developer Mode** on (`Settings → System → For developers`) so an unsigned dev package can
+  be side‑loaded.
+- **Xbox Game Bar** (the Store app, `Microsoft.XboxGamingOverlay`) for testing.
+
+---
+
+## 2. Build & test
+
+### Solution (overlay + core)
+
+```powershell
+dotnet build IntervalTimerGameBar.sln -c Debug -p:Platform=x64
+dotnet test  IntervalTimer.Core.Tests
+```
+
+Or open `IntervalTimerGameBar.sln` in Visual Studio and build/F5 `IntervalTimerOverlay`.
+
+### The Game Bar widget (script only)
+
+The widget is **not in the solution** — Visual Studio 2026's IDE can't load the legacy
+non‑SDK UWP project format (it throws `Unexpected null value of type 'IVsHierarchy'`). It
+builds fine from MSBuild, so a helper script drives it:
+
+```powershell
+.\build-widget.ps1                                  # Restore + Build, Debug|x64
+.\build-widget.ps1 -Rebuild                          # clean first
+.\build-widget.ps1 -Configuration Release -Platform ARM64
+```
+
+Output: `IntervalTimerWidget\bin\x64\Debug\IntervalTimerWidget.exe`, a loose AppX layout at
+`IntervalTimerWidget\bin\x64\Debug\AppxManifest.xml`, and an `.msix` under
+`IntervalTimerWidget\AppPackages\`.
+
+---
+
+## 3. Run
+
+### Overlay
+
+```powershell
+.\run-overlay.ps1                     # build Debug + launch
+.\run-overlay.ps1 -Configuration Release
+.\run-overlay.ps1 -Portable           # self-contained folder (no runtimes needed anywhere)
+.\run-overlay.ps1 -NoLaunch           # build only
+```
+
+Or double‑click the built exe, or F5 in Visual Studio.
+
+Once running:
+
+| Control | What it does |
+| --- | --- |
+| Drag the **"INTERVAL TIMER"** strip | move the window (position is remembered) |
+| **⚙** gear button | show/hide the settings panel (interval / sound / volume / auto‑start) |
+| **–** button | hide to the tray — the timer keeps running |
+| **✕** button | quit |
+| **Start / Stop** | start or stop the countdown |
+| **Test** (settings panel) | play the selected sound once |
+| Tray icon (right‑click) | Start/Stop, Show/Hide window, Exit |
+| `Alt+F4` | hides to tray (does not quit — use ✕ or tray → Exit) |
+
+Only one instance runs at a time: launching again just brings the existing window to the front.
+Settings are stored in `%LOCALAPPDATA%\IntervalTimerOverlay\settings.json`.
+
+### Game Bar widget
+
+```powershell
+.\build-widget.ps1 -Deploy
+```
+
+`-Deploy` installs the .NET Core UWP framework dependency packages, registers the loose build
+output (`Add-AppxPackage -Register` — no signing needed, just Developer Mode), and restarts
+Game Bar so it re‑scans its widget list.
+
+Then:
+
+1. Press `Win+G`.
+2. Click the **widget menu** button in the Game Bar toolbar.
+3. Pick **Interval Timer** (click the ⭐ to keep it on the bar).
+4. Set interval / sound / volume, press **Start**.
+5. **Pin** the widget (pin icon in its title bar) so it keeps beeping after you dismiss Game Bar.
+
+> **Do not double‑click the `.msix`.** It's signed with a throwaway test certificate, so a
+> plain install fails with `0x800B010A`. Always deploy via `build-widget.ps1 -Deploy`.
+
+> If the widget never appears in the menu, Game Bar didn't re‑scan. Fully quit it and reopen:
+> ```powershell
+> taskkill /f /im GameBar.exe
+> ```
+
+---
+
+## 4. Install the overlay as a Start‑menu app
+
+```powershell
+.\install-overlay.ps1              # install for the current user (no admin)
+.\install-overlay.ps1 -Startup     # + run automatically at sign-in
+.\install-overlay.ps1 -Uninstall   # remove it   (add -KeepSettings to keep settings.json)
+```
+
+It publishes a self‑contained Release build, copies it to
+`%LOCALAPPDATA%\Programs\IntervalTimerOverlay`, and adds a Start‑menu shortcut ("Interval
+Timer") you can pin to the taskbar. Nothing else is needed on the machine — no .NET runtime,
+no Windows App SDK, no MSIX, no certificate. Settings survive reinstalls.
+
+If the Start menu shows a stale/generic icon after installing, refresh the icon cache:
+
+```powershell
+ie4uinit.exe -show
+```
+
+---
+
+## 5. Iterate
+
+- **Overlay:** edit code → `.\run-overlay.ps1` (or F5). Fast.
+- **Widget:** edit code → `.\build-widget.ps1 -Deploy` → reopen the widget in Game Bar.
+  No XAML designer or F5 debugging (the project won't load in the IDE). Attach the VS
+  debugger to the `IntervalTimerWidget.exe` process if you need to step through it.
+- **Engine changes:** `dotnet test IntervalTimer.Core.Tests` before deploying either app.
+
+---
+
+## 6. Regenerate assets
+
+Both the sounds and the icons are generated by Python scripts (pure Pillow, no source art):
+
+```powershell
+python tools/gen_sounds.py     # 5 beep tones  -> <app>/Assets/Sounds/*.wav
+python tools/gen_icons.py      # stopwatch icon -> <app>/Assets/*.png  + Overlay/Assets/app.ico
+```
+
+Tweak the tone list in `gen_sounds.py` / the colours and shape at the top of `gen_icons.py`,
+rerun, then rebuild. If you add or rename a sound, also update `SoundCatalog.All` in
+`IntervalTimer.Core/SoundCatalog.cs` and the `<Content Include="Assets\Sounds\...">` list in
+`IntervalTimerWidget.csproj`.
+
+---
+
+## 7. Distribution
+
+| Target | How |
+| --- | --- |
+| This machine, Start menu | `install-overlay.ps1` |
+| Another machine, no installs | `run-overlay.ps1 -Portable` → zip the `…\win-x64\publish\` folder |
+| MSIX (overlay) | `dotnet publish IntervalTimerOverlay -p:WindowsPackageType=MSIX` — you'll have to trust its signing cert |
+| MSIX (widget) / Store | build Release with `build-widget.ps1 -Configuration Release`, sign the `.msix` under `AppPackages\`, submit via Partner Center |
+
+---
+
+## 8. Known limits
+
+- **Exclusive‑fullscreen** games (not borderless‑windowed) hide *every* overlay — the custom
+  overlay and Game Bar alike. Use borderless windowed mode.
+- An **unpinned** Game Bar widget is suspended by Windows when the overlay closes, so the
+  timer stops until you reopen it. Pin it, or use the standalone overlay. There is no
+  supported "run in the background while unpinned" API. The widget restores its countdown
+  from disk on resume so it doesn't lose its place.
+- The widget's Release build uses the **.NET Native** toolchain (slow to compile; the
+  "deprecated" build message is expected — it still gets security fixes). This is the only
+  configuration the Game Bar SDK supports.
+
+---
+
+## 9. Repository layout
+
+```
+IntervalTimerGameBar.sln          overlay + core + tests (NOT the widget)
+build-widget.ps1                   build/deploy the Game Bar widget
+run-overlay.ps1                    build + run the overlay exe
+install-overlay.ps1                install the overlay as a Start-menu app
+tools/gen_sounds.py                generate Assets/Sounds/*.wav
+tools/gen_icons.py                 generate the icon set + app.ico
+docs/                              architecture documentation
+IntervalTimer.Core/                shared engine, settings, sound catalog
+IntervalTimer.Core.Tests/          xUnit tests for the engine
+IntervalTimerOverlay/              WinUI 3 standalone app
+IntervalTimerWidget/               classic UWP Game Bar widget
+```

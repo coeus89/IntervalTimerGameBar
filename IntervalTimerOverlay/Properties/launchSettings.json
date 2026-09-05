@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "IntervalTimerOverlay (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "IntervalTimerOverlay (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

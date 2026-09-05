@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="IntervalTimerOverlay.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:IntervalTimerOverlay"
+    xmlns:tb="using:H.NotifyIcon"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Title="Interval Timer">
+
+    <Grid x:Name="Root" Background="#EE1B1B1F">
+        <tb:TaskbarIcon
+            x:Name="TrayIcon"
+            ToolTipText="Interval Timer">
+            <tb:TaskbarIcon.ContextFlyout>
+                <MenuFlyout>
+                    <MenuFlyoutItem x:Name="TrayToggleItem" Text="Start" Click="OnTrayToggle" />
+                    <MenuFlyoutItem Text="Show / hide window" Click="OnTrayShowHide" />
+                    <MenuFlyoutSeparator />
+                    <MenuFlyoutItem Text="Exit" Click="OnTrayExit" />
+                </MenuFlyout>
+            </tb:TaskbarIcon.ContextFlyout>
+        </tb:TaskbarIcon>
+
+        <Grid Padding="10" RowSpacing="6">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- Header / drag strip -->
+            <Grid x:Name="Header" Grid.Row="0" Background="Transparent" ColumnSpacing="4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="INTERVAL TIMER" FontSize="11" FontWeight="SemiBold"
+                           Opacity="0.6" VerticalAlignment="Center" />
+                <ToggleButton x:Name="SettingsToggle" Grid.Column="1" Padding="6,2" FontSize="12"
+                              Content="&#xE713;" FontFamily="Segoe MDL2 Assets"
+                              Checked="OnSettingsToggled" Unchecked="OnSettingsToggled"
+                              ToolTipService.ToolTip="Settings" />
+                <Button x:Name="MinimizeButton" Grid.Column="2" Padding="6,2" FontSize="12"
+                        Content="&#xE921;" FontFamily="Segoe MDL2 Assets" Click="OnHideToTray"
+                        ToolTipService.ToolTip="Hide to tray (keeps running)" />
+                <Button x:Name="CloseButton" Grid.Column="3" Padding="6,2" FontSize="12"
+                        Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets" Click="OnClose"
+                        ToolTipService.ToolTip="Close (quit)" />
+            </Grid>
+
+            <!-- Countdown -->
+            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="10">
+                <TextBlock x:Name="CountdownText" Text="01:00" FontSize="34" FontWeight="SemiBold"
+                           FontFamily="Consolas" VerticalAlignment="Center" />
+                <Button x:Name="StartStopButton" Content="Start" MinWidth="72" VerticalAlignment="Center"
+                        Click="OnStartStop" />
+            </StackPanel>
+
+            <!-- Settings panel -->
+            <StackPanel x:Name="SettingsPanel" Grid.Row="2" Spacing="8" Visibility="Collapsed">
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <NumberBox x:Name="IntervalBox" Grid.Column="0" Header="Beep every (seconds)"
+                               Minimum="1" Maximum="86400" SmallChange="1" LargeChange="10"
+                               SpinButtonPlacementMode="Inline" ValueChanged="OnIntervalChanged" />
+                </Grid>
+                <ComboBox x:Name="SoundBox" Header="Sound" HorizontalAlignment="Stretch"
+                          DisplayMemberPath="DisplayName" SelectionChanged="OnSoundChanged" />
+                <Grid ColumnSpacing="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <Slider x:Name="VolumeSlider" Grid.Column="0" Header="Volume" Minimum="0" Maximum="100"
+                            ValueChanged="OnVolumeChanged" />
+                    <Button Grid.Column="1" Content="Test" VerticalAlignment="Bottom" Click="OnTestSound" />
+                </Grid>
+                <CheckBox x:Name="AutoStartCheck" Content="Start timer when app opens"
+                          Checked="OnAutoStartChanged" Unchecked="OnAutoStartChanged" />
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
