@@ -57,9 +57,9 @@
                 <Window>
                   <AllowForegroundTransparency>true</AllowForegroundTransparency>
                   <Size>
-                    <Height>320</Height>
+                    <Height>96</Height>
                     <Width>300</Width>
-                    <MinHeight>260</MinHeight>
+                    <MinHeight>88</MinHeight>
                     <MinWidth>260</MinWidth>
                     <MaxHeight>440</MaxHeight>
                     <MaxWidth>380</MaxWidth>
@@ -79,6 +79,7 @@
 
   <Extensions>
     <!-- Metadata Based Marshaling registration for the Game Bar private types.
+         From the Microsoft.Gaming.XboxGameBar NuGet readme.txt.
          <Path> must point to a binary in the package but is unused for ClassId 00000355 (MBM). -->
     <Extension Category="windows.activatableClass.proxyStub">
       <ProxyStub ClassId="00000355-0000-0000-C000-000000000046">

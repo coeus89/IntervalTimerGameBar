@@ -32,7 +32,7 @@
     <AppxBundle>Never</AppxBundle>
     <AppxBundlePlatforms>x64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
-    <LangVersion>latest</LangVersion>
+    <LangVersion>7.3</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
@@ -43,7 +43,6 @@
     <PlatformTarget>x64</PlatformTarget>
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>bin\x64\Release\</OutputPath>
@@ -54,7 +53,6 @@
     <PlatformTarget>x64</PlatformTarget>
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
     <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|ARM64'">
@@ -66,7 +64,6 @@
     <PlatformTarget>ARM64</PlatformTarget>
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|ARM64'">
     <OutputPath>bin\ARM64\Release\</OutputPath>
@@ -77,7 +74,6 @@
     <PlatformTarget>ARM64</PlatformTarget>
     <UseVSHostingProcess>false</UseVSHostingProcess>
     <ErrorReport>prompt</ErrorReport>
-    <Prefer32Bit>true</Prefer32Bit>
     <UseDotNetNativeToolchain>true</UseDotNetNativeToolchain>
   </PropertyGroup>
   <PropertyGroup>
@@ -93,6 +89,13 @@
       <DependentUpon>WidgetPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <!-- IntervalTimer.Core compiled from source (a ProjectReference to the modern-SDK-built
+         netstandard2.0 lib drags incompatible facades into the package). -->
+    <Compile Include="..\IntervalTimer.Core\IntervalTimerEngine.cs"><Link>Core\IntervalTimerEngine.cs</Link></Compile>
+    <Compile Include="..\IntervalTimer.Core\IntervalTimerEvents.cs"><Link>Core\IntervalTimerEvents.cs</Link></Compile>
+    <Compile Include="..\IntervalTimer.Core\SoundCatalog.cs"><Link>Core\SoundCatalog.cs</Link></Compile>
+    <Compile Include="..\IntervalTimer.Core\TimerSettings.cs"><Link>Core\TimerSettings.cs</Link></Compile>
+    <Compile Include="..\IntervalTimer.Core\ISoundPlayer.cs"><Link>Core\ISoundPlayer.cs</Link></Compile>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -123,13 +126,6 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\IntervalTimer.Core\IntervalTimer.Core.csproj">
-      <Project>{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}</Project>
-      <Name>IntervalTimer.Core</Name>
-      <SetPlatform>Platform=AnyCPU</SetPlatform>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Gaming.XboxGameBar">

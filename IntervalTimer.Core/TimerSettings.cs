@@ -25,6 +25,9 @@ namespace IntervalTimer.Core
         /// <summary>Whether the timer should auto-start when the app/widget loads.</summary>
         public bool AutoStart { get; set; }
 
+        /// <summary>Game Bar widget: see-through background (show the game behind) vs a solid panel.</summary>
+        public bool TransparentBackground { get; set; } = true;
+
         public SoundInfo Sound => SoundCatalog.FromKey(SoundKey);
 
         public TimeSpan Interval => TimeSpan.FromSeconds(
@@ -40,6 +43,7 @@ namespace IntervalTimer.Core
             if (store.TryGet("SoundKey", out v) && v is string) s.SoundKey = (string)v;
             if (store.TryGet("Volume", out v)) s.Volume = ToDouble(v, s.Volume);
             if (store.TryGet("AutoStart", out v)) s.AutoStart = ToBool(v, s.AutoStart);
+            if (store.TryGet("TransparentBackground", out v)) s.TransparentBackground = ToBool(v, s.TransparentBackground);
 
             s.Normalize();
             return s;
@@ -53,6 +57,7 @@ namespace IntervalTimer.Core
             store.Set("SoundKey", SoundKey);
             store.Set("Volume", Volume);
             store.Set("AutoStart", AutoStart);
+            store.Set("TransparentBackground", TransparentBackground);
         }
 
         public void Normalize()

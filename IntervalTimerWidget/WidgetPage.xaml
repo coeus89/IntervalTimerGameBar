@@ -8,62 +8,77 @@
     mc:Ignorable="d"
     Background="Transparent">
 
-    <Grid Padding="12" RowSpacing="10">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
-        </Grid.RowDefinitions>
+    <!-- RootGrid.Background is switched between Transparent and a solid panel at runtime -->
+    <Grid x:Name="RootGrid" Background="Transparent">
+        <Grid Padding="12" RowSpacing="10">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
-        <!-- Countdown + start/stop -->
-        <Grid Grid.Row="0" ColumnSpacing="12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
-            <TextBlock x:Name="CountdownText" Grid.Column="0" Text="01:00"
-                       FontSize="40" FontFamily="Consolas" FontWeight="SemiBold"
-                       VerticalAlignment="Center" />
-            <Button x:Name="StartStopButton" Grid.Column="1" Content="Start" MinWidth="80"
-                    VerticalAlignment="Center" Click="OnStartStop" />
+            <!-- Header: countdown + start/stop + settings toggle -->
+            <Grid Grid.Row="0" ColumnSpacing="8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="CountdownText" Grid.Column="0" Text="01:00"
+                           FontSize="40" FontFamily="Consolas" FontWeight="SemiBold"
+                           VerticalAlignment="Center" />
+                <Button x:Name="StartStopButton" Grid.Column="1" Content="Start" MinWidth="72"
+                        VerticalAlignment="Center" Click="OnStartStop" />
+                <ToggleButton x:Name="SettingsToggle" Grid.Column="2" VerticalAlignment="Center"
+                              Padding="8,4" FontFamily="Segoe MDL2 Assets" Content="&#xE713;"
+                              Checked="OnSettingsToggled" Unchecked="OnSettingsToggled"
+                              ToolTipService.ToolTip="Settings" />
+            </Grid>
+
+            <!-- Collapsible settings -->
+            <StackPanel x:Name="SettingsPanel" Grid.Row="1" Spacing="10" Visibility="Collapsed">
+
+                <!-- Interval -->
+                <StackPanel>
+                    <TextBlock Text="Beep every (seconds)" FontSize="12" Opacity="0.7" />
+                    <Grid ColumnSpacing="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <RepeatButton Grid.Column="0" Content="&#x2212;" Width="36" Click="OnIntervalDown" />
+                        <TextBox x:Name="IntervalBox" Grid.Column="1" Text="60"
+                                 InputScope="Number" TextAlignment="Center"
+                                 LostFocus="OnIntervalCommitted" KeyDown="OnIntervalKeyDown" />
+                        <RepeatButton Grid.Column="2" Content="+" Width="36" Click="OnIntervalUp" />
+                    </Grid>
+                </StackPanel>
+
+                <!-- Sound -->
+                <StackPanel>
+                    <TextBlock Text="Sound" FontSize="12" Opacity="0.7" />
+                    <Grid ColumnSpacing="6">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <ComboBox x:Name="SoundBox" Grid.Column="0" HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnSoundChanged" />
+                        <Button Grid.Column="1" Content="Test" Click="OnTestSound" />
+                    </Grid>
+                </StackPanel>
+
+                <!-- Volume -->
+                <StackPanel>
+                    <TextBlock Text="Volume" FontSize="12" Opacity="0.7" />
+                    <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" ValueChanged="OnVolumeChanged" />
+                </StackPanel>
+
+                <CheckBox x:Name="TransparentCheck" Content="Transparent background"
+                          Checked="OnTransparentChanged" Unchecked="OnTransparentChanged" />
+                <CheckBox x:Name="AutoStartCheck" Content="Start timer when widget opens"
+                          Checked="OnAutoStartChanged" Unchecked="OnAutoStartChanged" />
+            </StackPanel>
         </Grid>
-
-        <!-- Interval -->
-        <StackPanel Grid.Row="1">
-            <TextBlock Text="Beep every (seconds)" FontSize="12" Opacity="0.7" />
-            <Grid ColumnSpacing="6">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <RepeatButton Grid.Column="0" Content="&#x2212;" Width="36" Click="OnIntervalDown" />
-                <TextBox x:Name="IntervalBox" Grid.Column="1" Text="60"
-                         InputScope="Number" TextAlignment="Center"
-                         LostFocus="OnIntervalCommitted" KeyDown="OnIntervalKeyDown" />
-                <RepeatButton Grid.Column="2" Content="+" Width="36" Click="OnIntervalUp" />
-            </Grid>
-        </StackPanel>
-
-        <!-- Sound -->
-        <StackPanel Grid.Row="2">
-            <TextBlock Text="Sound" FontSize="12" Opacity="0.7" />
-            <Grid ColumnSpacing="6">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="Auto" />
-                </Grid.ColumnDefinitions>
-                <ComboBox x:Name="SoundBox" Grid.Column="0" HorizontalAlignment="Stretch"
-                          SelectionChanged="OnSoundChanged" />
-                <Button Grid.Column="1" Content="Test" Click="OnTestSound" />
-            </Grid>
-        </StackPanel>
-
-        <!-- Volume -->
-        <StackPanel Grid.Row="3">
-            <TextBlock Text="Volume" FontSize="12" Opacity="0.7" />
-            <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" ValueChanged="OnVolumeChanged" />
-        </StackPanel>
     </Grid>
 </Page>

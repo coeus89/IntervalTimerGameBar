@@ -35,10 +35,29 @@ Both are driven by **`IntervalTimer.Core`**, a small drift‑free scheduler.
 
 ### Extra prerequisites for the Game Bar widget
 
-- **Visual Studio 2026** (or 2022) with the **Universal Windows Platform development** workload
+> **The widget currently does not run on this machine.** It compiles (VS 2022 + UWP
+> workload), but the classic‑UWP .NET runtime — frozen at .NET Core 2.2 — can't load the app
+> on Windows Insider build 26200 (`BadImageFormatException` on `System.Private.CoreLib` during
+> CLR bootstrap, before Game Bar can host it). See
+> [docs/IntervalTimerWidget.md](docs/IntervalTimerWidget.md) for the full crash‑dump
+> analysis. **Use the standalone overlay** — it does everything the widget does and actually
+> runs. The widget build steps below are kept for a stable‑Windows machine.
+
+- **Visual Studio 2022** with the **Universal Windows Platform development** workload
   (`Microsoft.VisualStudio.Workload.Universal`). This brings the .NET Native compiler, the
-  classic UWP targeting pack, and the UWP MSBuild targets. The widget is built by MSBuild, not
-  `dotnet`.
+  classic UWP targeting pack, and the UWP MSBuild targets. VS 2026 will *not* work (it
+  compiles but the output can't be loaded by the UWP runtime).
+
+  ```powershell
+  # elevated shell — add the workload to an existing VS 2022 install
+  & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe" modify `
+    --installPath "$env:ProgramFiles\Microsoft Visual Studio\2022\Community" `
+    --add Microsoft.VisualStudio.Workload.Universal --includeRecommended --norestart --passive
+  ```
+
+  Opening `IntervalTimerWidget.csproj` in VS 2022 before the workload is installed shows
+  **"Unsupported — the project type may not be installed"**. That's the missing workload.
+  `build-widget.ps1` builds it via VS 2022's MSBuild (it refuses VS 2026 automatically).
 
   ```powershell
   # elevated shell — one-time
@@ -76,9 +95,9 @@ Or open `IntervalTimerGameBar.sln` in Visual Studio and build/F5 `IntervalTimerO
 
 ### The Game Bar widget (script only)
 
-The widget is **not in the solution** — Visual Studio 2026's IDE can't load the legacy
-non‑SDK UWP project format (it throws `Unexpected null value of type 'IVsHierarchy'`). It
-builds fine from MSBuild, so a helper script drives it:
+The widget is **not in `IntervalTimerGameBar.sln`** — the .NET CLI and VS 2026 both choke on
+the classic UWP project. Open **`IntervalTimerWidget.sln`** in Visual Studio 2022 instead, or
+drive it from the command line:
 
 ```powershell
 .\build-widget.ps1                                  # Restore + Build, Debug|x64

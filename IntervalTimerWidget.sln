@@ -1,0 +1,54 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35828.75
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntervalTimer.Core", "IntervalTimer.Core\IntervalTimer.Core.csproj", "{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IntervalTimerWidget", "IntervalTimerWidget\IntervalTimerWidget.csproj", "{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|ARM64 = Debug|ARM64
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|ARM64 = Release|ARM64
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Debug|x64.Build.0 = Debug|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Release|ARM64.Build.0 = Release|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Release|x64.ActiveCfg = Release|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Release|x64.Build.0 = Release|Any CPU
+		{7A1D9E22-4C56-4B8A-9E13-2F6C8B4A7D30}.Release|x86.ActiveCfg = Release|Any CPU
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|ARM64.ActiveCfg = Debug|ARM64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|ARM64.Build.0 = Debug|ARM64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|ARM64.Deploy.0 = Debug|ARM64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|x64.ActiveCfg = Debug|x64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|x64.Build.0 = Debug|x64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|x64.Deploy.0 = Debug|x64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|x86.ActiveCfg = Debug|x86
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|x86.Build.0 = Debug|x86
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Debug|x86.Deploy.0 = Debug|x86
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|ARM64.ActiveCfg = Release|ARM64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|ARM64.Build.0 = Release|ARM64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|ARM64.Deploy.0 = Release|ARM64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|x64.ActiveCfg = Release|x64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|x64.Build.0 = Release|x64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|x64.Deploy.0 = Release|x64
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|x86.ActiveCfg = Release|x86
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|x86.Build.0 = Release|x86
+		{2E4B7C10-9A3F-4D28-B6E1-8C7A4F2D9B01}.Release|x86.Deploy.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {512D1B20-A1C0-465D-9B89-43035191F25D}
+	EndGlobalSection
+EndGlobal

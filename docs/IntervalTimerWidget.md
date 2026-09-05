@@ -3,6 +3,30 @@
 A real Xbox Game Bar widget: a UWP XAML page rendered inside the `Win+G` overlay. Same timer,
 same sounds as the standalone overlay, plus the Game Bar plumbing.
 
+> ## ⚠️ Does not run on this machine (Windows 11 build 26200)
+>
+> The project builds — with VS 2022's MSBuild + the UWP workload, in Debug *or* Release — but
+> the resulting app **cannot be loaded** by the classic‑UWP .NET runtime on this box.
+> Launching it (standalone or via Game Bar) fails during CLR bootstrap, before any managed
+> code runs:
+>
+> - **Debug (CoreCLR):** `System.BadImageFormatException: Could not load 'System.Private.CoreLib,
+>   Version=4.0.0.0' … An attempt was made to load a program with an incorrect format`
+> - **Release (.NET Native):** `System.IO.FileNotFoundException: Could not load
+>   'System.Private.CoreLib, … b03f5f7f11d50a3a'`
+>
+> Verified via crash‑dump analysis: `Microsoft.NET.CoreRuntime.2.2` (2.2.31331.1) is
+> installed, correct arch (x64), file intact (hash matches the package), valid PE — and the
+> CoreCLR still rejects its own `System.Private.CoreLib`. The classic UWP .NET runtime
+> (frozen at .NET Core 2.2, ~2020) is not compatible with this Windows Insider/Canary build
+> (`10.0.26200`). Nothing in the project fixes this — it needs a stable Windows build with a
+> working UWP framework runtime, or the widget model is simply a dead end here.
+>
+> **Use the standalone overlay** (`install-overlay.ps1` → "Interval Timer" in the Start
+> menu). It does everything the widget does — beep every X seconds, always on top over a
+> game — and it's modern, so it actually runs. The widget project is kept for reference / a
+> future machine.
+
 - **Type:** classic UWP, **.NET Native** toolchain, non-SDK `.csproj`.
 - **TFM:** `UAP 10.0`, `TargetPlatformVersion 10.0.26100.0`, min `10.0.17763.0`.
 - **Not in the solution** — VS 2026 can't load legacy UWP projects
@@ -138,15 +162,29 @@ Game Bar (it just doesn't beep while suspended — a platform limit, not a bug).
 Plain UWP controls only (no WinUI 2 `NumberBox`):
 
 ```
-Grid (transparent)
-├─ Countdown row     CountdownText (Consolas 40)   Start/Stop button
-├─ Interval          [ − ]  TextBox (InputScope Number)  [ + ]     (RepeatButtons + commit on LostFocus/Enter)
-├─ Sound             ComboBox (bound to SoundCatalog.All)   Test button
-└─ Volume            Slider 0–100
+RootGrid  (Background swapped Transparent <-> #EE1B1B1F at runtime)
+└─ Grid
+   ├─ Header           CountdownText (Consolas 40)   Start/Stop   ⚙ SettingsToggle
+   └─ SettingsPanel  (collapsed by default; ⚙ toggles it)
+      ├─ Interval        [ − ]  TextBox (InputScope Number)  [ + ]
+      ├─ Sound           ComboBox (bound to SoundCatalog.All)   Test
+      ├─ Volume          Slider 0–100
+      ├─ [ ] Transparent background
+      └─ [ ] Start timer when widget opens
 ```
 
-The `ComboBox` has **no `DisplayMemberPath`** — it relies on `SoundInfo.ToString()`, because
-`DisplayMemberPath` binding uses reflection that .NET Native / a future AOT pass can trim.
+- **Collapsed by default** so the settings aren't on screen during a game — only the
+  countdown + Start/Stop show. The ⚙ `ToggleButton` expands/collapses `SettingsPanel` and
+  calls `ApplicationView.TryResizeView` to grow/shrink the Game Bar window between
+  `CollapsedHeight` (96) and `ExpandedHeight` (340). The manifest `MinHeight` is 88 so Game
+  Bar allows the collapsed size.
+- **"Transparent background"** (persisted as `TimerSettings.TransparentBackground`, default
+  on) switches `RootGrid.Background` between `Colors.Transparent` (the game shows through —
+  needs `<AllowForegroundTransparency>` in the manifest, which is set) and a solid dark
+  panel.
+- The `ComboBox` has **no `DisplayMemberPath`** — it relies on `SoundInfo.ToString()`,
+  because `DisplayMemberPath` binding uses reflection that .NET Native / a future AOT pass
+  can trim.
 
 ## `AppDataSettingsStore`
 
@@ -177,11 +215,20 @@ the widget is a packaged app.
 1. Build → loose AppX layout at `bin\x64\Debug\AppxManifest.xml`.
 2. `Add-AppxPackage` the `Microsoft.NET.CoreRuntime/CoreFramework/Native` dependency `.appx`
    files from `AppPackages\…\Dependencies\x64\`.
-3. `Add-AppxPackage -Register bin\x64\Debug\AppxManifest.xml` — registers the loose build,
+3. **`Remove-AppxPackage`** any existing `JKara.IntervalTimerWidget` registration first — a
+   dev (loose) registration cannot be replaced in place when the manifest changed but the
+   `Version` didn't (*"the package is already installed. Increment the version number…"*).
+4. `Add-AppxPackage -Register bin\x64\Debug\AppxManifest.xml` — registers the loose build,
    **no signing needed** (just Developer Mode). This is why you must not double-click the
    `.msix` (test-signed → `0x800B010A`).
-4. Kill `GameBar.exe` / `XboxGameBarWidgets` / `GameBarFTServer` so Game Bar re-enumerates
+5. Kill `GameBar.exe` / `XboxGameBarWidgets` / `GameBarFTServer` so Game Bar re-enumerates
    widgets on next `Win+G`.
+
+If Game Bar's widget menu doesn't list it after that, Game Bar's own widget cache is stale —
+it stores per-widget state in
+`%LOCALAPPDATA%\Packages\Microsoft.XboxGamingOverlay_8wekyb3d8bbwe\LocalState\profileDataSettings.txt`
+(`profile.settingsStorage.widget_<PFN>_App_IntervalTimerWidget`). A full Game Bar restart
+(not just `GameBar.exe`) usually forces a re-enumeration.
 
 Verify registration independent of Game Bar's UI:
 

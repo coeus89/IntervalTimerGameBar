@@ -45,22 +45,42 @@ if (-not (Test-Path $project)) {
     throw "Can't find $project"
 }
 
-# --- Locate MSBuild (needs VS MSBuild, not 'dotnet' - classic UWP targets) ---
+# --- Locate MSBuild ---
+# MUST be Visual Studio 2022's MSBuild. VS 2026 (18.x) compiles the project but its Roslyn
+# emits an assembly the classic-UWP .NET Core 2.2 runtime can't load (BadImageFormatException
+# at launch -> the widget never appears in Game Bar). VS 2022 (17.x) is compatible.
 function Find-MSBuild {
     $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
     if (Test-Path $vswhere) {
-        $path = & $vswhere -latest -prerelease -products * `
-            -requires Microsoft.Component.MSBuild `
+        # -version "[17.0,18.0)" restricts to VS 2022
+        $path = & $vswhere -products * -version '[17.0,18.0)' `
+            -requires Microsoft.VisualStudio.Workload.Universal `
             -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
         if ($path -and (Test-Path $path)) { return $path }
+
+        $any2022 = & $vswhere -products * -version '[17.0,18.0)' `
+            -requires Microsoft.Component.MSBuild `
+            -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+        if ($any2022 -and (Test-Path $any2022)) {
+            Write-Warning "VS 2022 found but without the Universal Windows Platform workload - the build may fail. Install it via the VS Installer."
+            return $any2022
+        }
     }
-    $fallbacks = @(
-        "$env:ProgramFiles\Microsoft Visual Studio\18\Community\MSBuild\Current\Bin\MSBuild.exe",
+    foreach ($f in @(
         "$env:ProgramFiles\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe",
-        "${env:ProgramFiles(x86)}\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\MSBuild.exe"
-    )
-    foreach ($f in $fallbacks) { if (Test-Path $f) { return $f } }
-    throw "MSBuild not found. Install Visual Studio with the 'Universal Windows Platform development' workload."
+        "$env:ProgramFiles\Microsoft Visual Studio\2022\Professional\MSBuild\Current\Bin\MSBuild.exe",
+        "$env:ProgramFiles\Microsoft Visual Studio\2022\Enterprise\MSBuild\Current\Bin\MSBuild.exe"
+    )) { if (Test-Path $f) { return $f } }
+
+    throw @"
+Visual Studio 2022 with the 'Universal Windows Platform development' workload is required to
+build this widget (VS 2026 produces an assembly the UWP runtime can't load). Install it:
+
+  winget install Microsoft.VisualStudio.2022.Community
+  & "`${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\setup.exe" modify ``
+    --installPath "`$env:ProgramFiles\Microsoft Visual Studio\2022\Community" ``
+    --add Microsoft.VisualStudio.Workload.Universal --includeRecommended --norestart --passive
+"@
 }
 
 $msbuild = Find-MSBuild
@@ -111,8 +131,16 @@ if ($Deploy) {
             try { Add-AppxPackage -Path $_.FullName -EA Stop } catch { }  # already-installed is fine
         }
 
+    # A dev (loose) registration can't be replaced in place when the manifest changed but the
+    # version didn't ("package is already installed. Increment the version number..."), so
+    # remove the old registration first.
+    Get-AppxPackage -Name 'JKara.IntervalTimerWidget' -EA 0 | ForEach-Object {
+        Write-Host "Removing previous registration $($_.Version)..." -ForegroundColor DarkGray
+        Remove-AppxPackage -Package $_.PackageFullName -EA 0
+    }
+
     Write-Host "`nRegistering widget for the current user..." -ForegroundColor Cyan
-    Add-AppxPackage -Register $appxManifest -ForceUpdateFromAnyVersion
+    Add-AppxPackage -Register $appxManifest
 
     # Game Bar caches its widget list - restart it so the (re)deployed widget shows up.
     Get-Process -EA 0 |

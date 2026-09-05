@@ -87,3 +87,7 @@ Desktop.ini
 *.bak
 *.tmp
 *.orig
+
+## VS project upgrade logs
+UpgradeLog*.htm
+Backup*/

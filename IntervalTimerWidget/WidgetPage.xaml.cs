@@ -2,10 +2,14 @@ using System;
 using System.Globalization;
 using IntervalTimer.Core;
 using Microsoft.Gaming.XboxGameBar;
+using Windows.Foundation;
+using Windows.UI;
 using Windows.UI.Core;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Navigation;
 
 namespace IntervalTimerWidget
@@ -14,6 +18,14 @@ namespace IntervalTimerWidget
     {
         private const string RunningKey = "IsRunning";
         private const string NextFireKey = "NextFireUtcTicks";
+
+        private const double CollapsedHeight = 96;
+        private const double ExpandedHeight = 340;
+        private const double WidgetWidth = 300;
+
+        private static readonly Brush PanelBrush =
+            new SolidColorBrush(Color.FromArgb(0xEE, 0x1B, 0x1B, 0x1F));
+        private static readonly Brush ClearBrush = new SolidColorBrush(Colors.Transparent);
 
         private readonly AppDataSettingsStore _store = new AppDataSettingsStore();
         private readonly IntervalTimerEngine _engine = new IntervalTimerEngine();
@@ -52,9 +64,16 @@ namespace IntervalTimerWidget
             VolumeSlider.Value = _settings.Volume * 100.0;
             SoundBox.ItemsSource = SoundCatalog.All;
             SoundBox.SelectedItem = _settings.Sound;
+            TransparentCheck.IsChecked = _settings.TransparentBackground;
+            AutoStartCheck.IsChecked = _settings.AutoStart;
 
             _engine.IntervalSeconds = _settings.IntervalSeconds;
             _loading = false;
+
+            ApplyBackground();
+            // Start collapsed so the settings aren't on screen during a game.
+            SettingsPanel.Visibility = Visibility.Collapsed;
+            RequestResize(false);
 
             // Resume a schedule that was running before the widget was suspended.
             object runningObj, nextObj;
@@ -106,6 +125,24 @@ namespace IntervalTimerWidget
                 : string.Format("{0:00}:{1:00}", t.Minutes, t.Seconds);
         }
 
+        private void ApplyBackground()
+        {
+            RootGrid.Background = _settings.TransparentBackground ? ClearBrush : PanelBrush;
+        }
+
+        private void RequestResize(bool expanded)
+        {
+            try
+            {
+                ApplicationView.GetForCurrentView()?.TryResizeView(
+                    new Size(WidgetWidth, expanded ? ExpandedHeight : CollapsedHeight));
+            }
+            catch
+            {
+                // No view (e.g. running before activation) - Game Bar sizes from the manifest.
+            }
+        }
+
         private void PersistRunState()
         {
             _store.Set(RunningKey, _engine.IsRunning);
@@ -119,6 +156,28 @@ namespace IntervalTimerWidget
         }
 
         // ---- handlers ----
+
+        private void OnSettingsToggled(object sender, RoutedEventArgs e)
+        {
+            var open = SettingsToggle.IsChecked == true;
+            SettingsPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
+            RequestResize(open);
+        }
+
+        private void OnTransparentChanged(object sender, RoutedEventArgs e)
+        {
+            if (_loading) return;
+            _settings.TransparentBackground = TransparentCheck.IsChecked == true;
+            ApplyBackground();
+            SaveSettings();
+        }
+
+        private void OnAutoStartChanged(object sender, RoutedEventArgs e)
+        {
+            if (_loading) return;
+            _settings.AutoStart = AutoStartCheck.IsChecked == true;
+            SaveSettings();
+        }
 
         private void OnStartStop(object sender, RoutedEventArgs e)
         {
