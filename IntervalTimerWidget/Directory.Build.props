@@ -1,0 +1,12 @@
+<Project>
+
+  <!--
+    The Game Bar widget is a classic non-SDK UWP project (C# 7.3, .NET Native). It must NOT
+    inherit the repo-root Directory.Build.props (LangVersion latest, Nullable enable) or
+    central package management. This file replaces the root one for this folder.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+</Project>

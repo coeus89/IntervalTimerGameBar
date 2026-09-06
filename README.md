@@ -11,26 +11,31 @@ timing engine:
 
 Both are driven by **`IntervalTimer.Core`**, a small drift‑free scheduler.
 
-| Project | Type | In `.sln`? | Build with | Docs |
+| Project | Type | Solution | Build with | Docs |
 | --- | --- | --- | --- | --- |
-| `IntervalTimer.Core` | `netstandard2.0` class lib | ✅ | `dotnet` | [docs/IntervalTimer.Core.md](docs/IntervalTimer.Core.md) |
-| `IntervalTimerOverlay` | WinUI 3 desktop, **unpackaged** | ✅ | `run-overlay.ps1` / VS / `dotnet` | [docs/IntervalTimerOverlay.md](docs/IntervalTimerOverlay.md) |
-| `IntervalTimerWidget` | Classic UWP (.NET Native) | ❌ (see below) | `build-widget.ps1` | [docs/IntervalTimerWidget.md](docs/IntervalTimerWidget.md) |
-| `IntervalTimer.Core.Tests` | xUnit (`net8.0`) | ❌ | `dotnet test` | — |
+| `IntervalTimer.Core` | `netstandard2.0` class lib | both | `dotnet` | [docs/IntervalTimer.Core.md](docs/IntervalTimer.Core.md) |
+| `IntervalTimerOverlay` | WinUI 3, **.NET 10**, unpackaged | `IntervalTimerWinUI.sln` | `run-overlay.ps1` / VS 2026 / `dotnet` | [docs/IntervalTimerOverlay.md](docs/IntervalTimerOverlay.md) |
+| `IntervalTimer.Core.Tests` | xUnit, **net10.0** | `IntervalTimerWinUI.sln` | `dotnet test` | — |
+| `IntervalTimerWidget` | Classic UWP (.NET Native) | `IntervalTimerWidget.sln` | **VS 2022** / `build-widget.ps1` | [docs/IntervalTimerWidget.md](docs/IntervalTimerWidget.md) |
 
-**System overview:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+**System overview:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
+**Everything at once:** `.\build.ps1`
+
+Package versions are centralized in `Directory.Packages.props`; the SDK is pinned by
+`global.json` (10.0.4xx). The non‑SDK widget opts out of both via its own nested
+`Directory.*.props`.
 
 ---
 
 ## 1. Prerequisites
 
-### For the overlay + core (everything in the solution)
+### For the overlay + core (`IntervalTimerWinUI.sln`)
 
-- **.NET SDK 8+** (`dotnet --version`). .NET 10 SDK is fine.
-- **Windows App SDK 1.6 runtime** on the machine — Visual Studio installs it; a standalone
+- **.NET SDK 10.0.4xx** (`dotnet --version`; pinned by `global.json`).
+- **Windows App SDK 2.4 runtime** on the machine — Visual Studio installs it; a standalone
   installer is [here](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads).
   (Not needed if you use `run-overlay.ps1 -Portable` or `install-overlay.ps1`, which bundle it.)
-- Optional: **Visual Studio 2022/2026** with the *WinUI application development* workload for
+- Optional: **Visual Studio 2026** with the *WinUI application development* workload for
   F5 debugging and the XAML designer.
 
 ### Extra prerequisites for the Game Bar widget
@@ -84,20 +89,26 @@ Both are driven by **`IntervalTimer.Core`**, a small drift‑free scheduler.
 
 ## 2. Build & test
 
-### Solution (overlay + core)
+### Everything
 
 ```powershell
-dotnet build IntervalTimerGameBar.sln -c Debug -p:Platform=x64
+.\build.ps1                       # solution + tests + widget
+.\build.ps1 -Configuration Release -SkipWidget
+```
+
+### Overlay + core + tests
+
+```powershell
+dotnet build IntervalTimerWinUI.sln -c Debug
 dotnet test  IntervalTimer.Core.Tests
 ```
 
-Or open `IntervalTimerGameBar.sln` in Visual Studio and build/F5 `IntervalTimerOverlay`.
+Or open `IntervalTimerWinUI.sln` in Visual Studio 2026 and build/F5 `IntervalTimerOverlay`.
 
-### The Game Bar widget (script only)
+### The Game Bar widget
 
-The widget is **not in `IntervalTimerGameBar.sln`** — the .NET CLI and VS 2026 both choke on
-the classic UWP project. Open **`IntervalTimerWidget.sln`** in Visual Studio 2022 instead, or
-drive it from the command line:
+Open **`IntervalTimerWidget.sln`** in **Visual Studio 2022** (with the *Universal Windows
+Platform development* workload), or drive it from the command line:
 
 ```powershell
 .\build-widget.ps1                                  # Restore + Build, Debug|x64
@@ -243,15 +254,20 @@ rerun, then rebuild. If you add or rename a sound, also update `SoundCatalog.All
 ## 9. Repository layout
 
 ```
-IntervalTimerGameBar.sln          overlay + core + tests (NOT the widget)
-build-widget.ps1                   build/deploy the Game Bar widget
+IntervalTimerWinUI.sln             Core + Overlay + Tests   (dotnet / VS 2026)
+IntervalTimerWidget.sln            Core + Widget            (VS 2022 only)
+global.json                        pins the .NET SDK
+Directory.Build.props              shared props for the SDK-style projects
+Directory.Packages.props           central NuGet versions
+build.ps1                          build the solution + tests + widget
+build-widget.ps1                   build/deploy just the Game Bar widget
 run-overlay.ps1                    build + run the overlay exe
 install-overlay.ps1                install the overlay as a Start-menu app
 tools/gen_sounds.py                generate Assets/Sounds/*.wav
 tools/gen_icons.py                 generate the icon set + app.ico
 docs/                              architecture documentation
 IntervalTimer.Core/                shared engine, settings, sound catalog
-IntervalTimer.Core.Tests/          xUnit tests for the engine
-IntervalTimerOverlay/              WinUI 3 standalone app
-IntervalTimerWidget/               classic UWP Game Bar widget
+IntervalTimer.Core.Tests/          xUnit tests
+IntervalTimerOverlay/              WinUI 3 standalone app  (Program.cs = custom Main)
+IntervalTimerWidget/               classic UWP Game Bar widget (nested Directory.*.props opt-out)
 ```

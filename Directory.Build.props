@@ -1,0 +1,23 @@
+<Project>
+
+  <!--
+    Shared MSBuild properties for the SDK-style projects (IntervalTimer.Core,
+    IntervalTimerOverlay, IntervalTimer.Core.Tests).
+
+    The classic non-SDK IntervalTimerWidget.csproj does NOT import this file - it sets its
+    own C# 7.3 / nullable-disable and cannot use central package management.
+  -->
+  <PropertyGroup>
+    <Product>Interval Timer</Product>
+    <Company>JKara</Company>
+    <Authors>JKara</Authors>
+    <Version>1.1.0</Version>
+
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+</Project>

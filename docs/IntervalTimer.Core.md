@@ -96,9 +96,11 @@ interface ISettingsStore
 `Volume` (0–1, default 0.8), `AutoStart` (default false), `TransparentBackground` (default
 true — used only by the widget).
 
-- `Load(store)` reads four keys, coerces each with `Convert.ToInt32/ToDouble/ToBoolean` inside
-  a try/catch (a bad value falls back to the default), then `Normalize()`.
-- `Save(store)` calls `Normalize()` then writes the four keys as their native types.
+- `Load(store)` reads the five keys, coerces each with `Convert.ToInt32/ToDouble/ToBoolean`
+  **using `CultureInfo.InvariantCulture`** inside a try/catch (a bad value falls back to the
+  default), then `Normalize()`. Invariant parsing means a stringified `"0.8"` never becomes
+  `8` on a comma-decimal locale.
+- `Save(store)` calls `Normalize()` then writes the five keys as their native types.
 - `Normalize()` clamps the interval to `[1, 86400]`, volume to `[0,1]`, and resolves
   `SoundKey` through `SoundCatalog.FromKey` (an unknown key becomes `"beep"`).
 
@@ -136,15 +138,18 @@ Not implemented in Core because the audio APIs (`Windows.Media.Playback`) aren't
 
 ## Tests — `IntervalTimer.Core.Tests`
 
-xUnit, `net8.0`, **not** in the solution (run with `dotnet test IntervalTimer.Core.Tests`).
-Four tests in `IntervalTimerEngineTests.cs`:
+xUnit, `net10.0`, in `IntervalTimerWinUI.sln` (or `dotnet test IntervalTimer.Core.Tests`).
+26 tests across three files:
 
-| Test | Asserts |
-| --- | --- |
-| `Interval_is_clamped_to_the_supported_range` | `TimeSpan.Zero` → 1 s, `7 days` → 24 h |
-| `Remaining_reports_the_full_interval_while_stopped` | `Remaining == Interval` before `Start()` |
-| `Elapsed_fires_once_per_interval_without_drift` | ~4 `Elapsed` over 4.6 s at a 1 s interval |
-| `Long_gap_produces_a_single_resynced_beep` | `ResumeAt(5 min ago)` → one `Elapsed`, `Resynced == true` |
+- **`IntervalTimerEngineTests.cs`** — interval clamping; `Remaining` while stopped;
+  `Elapsed` fires ~once per interval without drift; a long gap (`ResumeAt` 5 min ago) produces
+  one `Resynced` beep. Timing tests use real wall-clock sleeps → assert ranges, not exact
+  counts.
+- **`TimerSettingsTests.cs`** — defaults from an empty store; full Save→Load round-trip;
+  `Normalize` clamps interval / volume; unknown `SoundKey` → default; corrupt values fall
+  back; `"0.8"` parses as `0.8` under `de-DE`; `Interval` property clamps independently.
+- **`SoundCatalogTests.cs`** — the five keys and order; `Default` is `beep`; `FromKey`
+  case-insensitivity; blank/unknown → `Default`; `AppxUri` / `ToString()` shape.
 
-The timing tests use real wall-clock sleeps, so they take a few seconds and assert ranges, not
-exact counts.
+`DictionarySettingsStore` (test project) is the in-memory `ISettingsStore` used by the
+settings tests.

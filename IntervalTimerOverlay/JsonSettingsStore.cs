@@ -2,18 +2,18 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using IntervalTimer.Core;
 
 namespace IntervalTimerOverlay
 {
     /// <summary>
     /// Backs <see cref="TimerSettings"/> with a JSON file under %LOCALAPPDATA%. Works without
-    /// package identity, so the app can run as a plain unpackaged .exe.
+    /// package identity, so the app can run as a plain unpackaged .exe. Uses a source-generated
+    /// serializer so the app stays trim/AOT-safe.
     /// </summary>
     internal sealed class JsonSettingsStore : ISettingsStore
     {
-        private static readonly JsonSerializerOptions Opts = new() { WriteIndented = true };
-
         private readonly string _path;
         private readonly Dictionary<string, JsonElement> _values;
 
@@ -30,8 +30,8 @@ namespace IntervalTimerOverlay
             {
                 if (File.Exists(_path))
                 {
-                    var parsed = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(
-                        File.ReadAllText(_path));
+                    var parsed = JsonSerializer.Deserialize(
+                        File.ReadAllText(_path), SettingsJsonContext.Default.DictionaryStringJsonElement);
                     if (parsed != null) _values = parsed;
                 }
             }
@@ -59,9 +59,28 @@ namespace IntervalTimerOverlay
 
         public void Set(string key, object value)
         {
-            _values[key] = JsonSerializer.SerializeToElement(value, Opts);
-            try { File.WriteAllText(_path, JsonSerializer.Serialize(_values, Opts)); }
-            catch { /* disk full / locked - keep the in-memory value */ }
+            // ISettingsStore only ever stores int/double/bool/string - all registered on the context.
+            _values[key] = JsonSerializer.SerializeToElement(
+                value, value?.GetType() ?? typeof(string), SettingsJsonContext.Default);
+            try
+            {
+                File.WriteAllText(_path, JsonSerializer.Serialize(
+                    _values, SettingsJsonContext.Default.DictionaryStringJsonElement));
+            }
+            catch
+            {
+                // disk full / locked - keep the in-memory value
+            }
         }
+    }
+
+    [JsonSourceGenerationOptions(WriteIndented = true)]
+    [JsonSerializable(typeof(Dictionary<string, JsonElement>))]
+    [JsonSerializable(typeof(int))]
+    [JsonSerializable(typeof(double))]
+    [JsonSerializable(typeof(bool))]
+    [JsonSerializable(typeof(string))]
+    internal partial class SettingsJsonContext : JsonSerializerContext
+    {
     }
 }

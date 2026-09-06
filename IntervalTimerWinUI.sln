@@ -6,6 +6,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntervalTimer.Core", "Inter
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntervalTimerOverlay", "IntervalTimerOverlay\IntervalTimerOverlay.csproj", "{890216EE-0598-4ECE-8030-3B1B8B20E591}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IntervalTimer.Core.Tests", "IntervalTimer.Core.Tests\IntervalTimer.Core.Tests.csproj", "{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM64 = Debug|ARM64
@@ -40,6 +42,18 @@ Global
 		{890216EE-0598-4ECE-8030-3B1B8B20E591}.Release|x64.Build.0 = Release|x64
 		{890216EE-0598-4ECE-8030-3B1B8B20E591}.Release|x64.Deploy.0 = Release|x64
 		{890216EE-0598-4ECE-8030-3B1B8B20E591}.Release|x86.ActiveCfg = Release|x64
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Debug|x64.Build.0 = Debug|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Debug|x86.Build.0 = Debug|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Release|ARM64.Build.0 = Release|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Release|x64.ActiveCfg = Release|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Release|x64.Build.0 = Release|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Release|x86.ActiveCfg = Release|Any CPU
+		{4C9E2A17-8B6D-4F3A-9C21-7E5D0A3F1B84}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -3,39 +3,47 @@
 A standalone always-on-top desktop overlay + system-tray icon. Modern WinUI 3, but built
 **unpackaged** so it ships as a plain `IntervalTimerOverlay.exe`.
 
-- **TFM:** `net8.0-windows10.0.19041.0`, `UseWinUI`, `WindowsPackageType=None`.
-- **In the solution.** Build with `dotnet`, Visual Studio F5, or `run-overlay.ps1`.
-- **Runtime need:** the Windows App SDK 1.6 runtime on the machine — *unless* published
+- **TFM:** `net10.0-windows10.0.26100.0` (min OS `10.0.17763.0`), `UseWinUI`,
+  `WindowsPackageType=None`.
+- **In `IntervalTimerWinUI.sln`.** Build with `dotnet`, Visual Studio F5, `run-overlay.ps1`,
+  or `build.ps1`.
+- **Runtime need:** the Windows App SDK 2.4 runtime on the machine — *unless* published
   self-contained (`run-overlay.ps1 -Portable`, `install-overlay.ps1`), which bundle it.
+- Package versions come from the repo-root `Directory.Packages.props`.
 
 ## Files
 
 | File | Role |
 | --- | --- |
-| `App.xaml` / `App.xaml.cs` | app entry, single-instance guard |
+| `Program.cs` | custom `Main` — single-instance redirection before the XAML runtime starts |
+| `App.xaml` / `App.xaml.cs` | app object; `BringToFront()` |
 | `MainWindow.xaml` / `.cs` | the whole overlay UI + behaviour |
-| `JsonSettingsStore.cs` | `ISettingsStore` over a JSON file in `%LOCALAPPDATA%` |
+| `JsonSettingsStore.cs` | `ISettingsStore` over a JSON file in `%LOCALAPPDATA%` (source-gen serializer) |
 | `MediaSoundPlayer.cs` | `ISoundPlayer` via `Windows.Media.Playback.MediaPlayer` |
 | `app.manifest` | `PerMonitorV2` DPI awareness, Win10+ compat GUIDs |
 | `Package.appxmanifest` | only used if you publish `-p:WindowsPackageType=MSIX` |
 | `Assets/app.ico` | embedded via `<ApplicationIcon>`; also the tray icon |
 | `Assets/Sounds/*.wav` | copied next to the exe (`CopyToOutputDirectory`) |
 
-## `App` — single instance
+## Single instance (`Program.Main`)
 
-`OnLaunched`:
+The csproj sets `DISABLE_XAML_GENERATED_MAIN`, so `Program.Main` is the real entry point:
 
-1. If `Window` is already set (OnLaunched fired twice in one process) → bring it to front, return.
-2. `AppInstance.FindOrRegisterForKey("IntervalTimerOverlay")`. If **not** current, another copy
-   owns the key → `RedirectActivationToAsync(GetActivatedEventArgs())`, then
-   `Process.GetCurrentProcess().Kill()` (a graceful exit can hang mid-XAML-init).
-3. Otherwise subscribe `keyInstance.Activated` → marshal to the UI thread and
-   `AppWindow.Show()` + `Activate()` + `MoveInZOrderAtTop()`.
-4. Create `MainWindow`, activate.
+1. `WinRT.ComWrappersSupport.InitializeComWrappers()`.
+2. `AppInstance.FindOrRegisterForKey("IntervalTimerOverlay")`.
+   - **Not current** → another copy owns the key: `RedirectActivationToAsync(...)` then
+     **`return`** (the process exits normally — nothing was initialized yet, so no `Kill()`).
+   - **Current** → subscribe `keyInstance.Activated` (raised on a future launch) to
+     `App.BringToFront()`, then `Application.Start(...)` with the standard
+     `DispatcherQueueSynchronizationContext` boilerplate.
+3. `App.OnLaunched` just creates `MainWindow` (plus a `Window is not null` re-entrancy guard).
 
-This matters because the window **hides to the tray instead of exiting** — without the guard,
-every relaunch (including `run-overlay.ps1` auto-launching over a tray instance) would stack a
-new window.
+`App.BringToFront()` is `public static` and thread-safe — it marshals to the window's
+`DispatcherQueue` before `AppWindow.Show()` + `Activate()` + `MoveInZOrderAtTop()`.
+
+This matters because the window **hides to the tray instead of exiting** — without this, every
+relaunch (including `run-overlay.ps1` auto-launching over a tray instance) would stack a new
+window.
 
 ## `MainWindow` — the overlay
 
@@ -114,12 +122,13 @@ throws without package identity.
 
 - Holds a `Dictionary<string, JsonElement>`; loads on construction (corrupt file → start empty).
 - `TryGet` maps `JsonValueKind` → `double` / `bool` / `string` (numbers always come back as
-  `double`; `TimerSettings` and the position restore use `Convert.*` so that's fine).
+  `double`; `TimerSettings` and the position restore use `Convert.*` with `InvariantCulture`).
 - `Set` writes the whole dictionary to disk on every call (try/catch — a locked file keeps the
   in-memory value).
-
-`System.Text.Json` here is reflection-based, which is why the project disables trimming
-(see below).
+- Serialization goes through **`SettingsJsonContext`**, a `[JsonSerializable]`
+  source-generated `JsonSerializerContext` (for `Dictionary<string, JsonElement>` +
+  `int`/`double`/`bool`/`string`). No runtime reflection → the app is trim/AOT-safe, so
+  `PublishTrimmed=true` can be re-enabled for a smaller `-Portable` build (validate per build).
 
 ## `MediaSoundPlayer`
 
@@ -141,11 +150,11 @@ Wrapped in try/catch so a missing audio device can't take down the timer.
 
 - `<WindowsPackageType>None</WindowsPackageType>` — the switch that makes it build a runnable
   exe instead of an MSIX. Overridable: `dotnet publish -p:WindowsPackageType=MSIX`.
-- `<PublishTrimmed>false</PublishTrimmed>` — trimming strips types that reflection-based
-  `System.Text.Json` needs at runtime.
-- `<PublishReadyToRun>false</PublishReadyToRun>` — R2R precompilation triggers
-  `System.TypeLoadException: Could not load type 'ComInterfaceEntry'` from CsWinRT in
-  self-contained publishes. (Framework-dependent R2R is fine, but off everywhere for safety.)
+- `<DefineConstants>...;DISABLE_XAML_GENERATED_MAIN</DefineConstants>` — hands the entry point
+  to `Program.cs`.
+- `<PublishTrimmed>false</PublishTrimmed>` — off by default; safe to opt in per build now that
+  JSON is source-generated. `<PublishReadyToRun>false</PublishReadyToRun>` — R2R triggers a
+  CsWinRT `ComInterfaceEntry` `TypeLoadException` in self-contained publishes.
 - `<ApplicationIcon>Assets\app.ico</ApplicationIcon>` — embeds the multi-res icon so the exe,
   Start-menu shortcut, and taskbar all show the stopwatch.
 
@@ -153,8 +162,8 @@ Output paths differ by command:
 
 | Command | exe path |
 | --- | --- |
-| `dotnet build` / `run-overlay.ps1` | `bin\x64\Debug\net8.0-windows10.0.19041.0\win-x64\` |
-| `dotnet publish` / `run-overlay.ps1 -Portable` | `bin\Debug\net8.0-…\win-x64\publish\` |
+| `dotnet build` / `run-overlay.ps1` | `bin\x64\Debug\net10.0-windows10.0.26100.0\win-x64\` |
+| `dotnet publish` / `run-overlay.ps1 -Portable` | `bin\Debug\net10.0-…\win-x64\publish\` |
 
 `run-overlay.ps1` and `install-overlay.ps1` glob for `IntervalTimerOverlay.exe` rather than
 hard-coding these.

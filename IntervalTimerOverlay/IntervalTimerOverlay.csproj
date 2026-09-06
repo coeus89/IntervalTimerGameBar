@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
     <TargetPlatformMinVersion>10.0.17763.0</TargetPlatformMinVersion>
     <RootNamespace>IntervalTimerOverlay</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -10,11 +10,12 @@
     <RuntimeIdentifiers>win-x86;win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
     <EnableMsixTooling>true</EnableMsixTooling>
-    <Nullable>enable</Nullable>
     <!-- Run unpackaged: build produces a plain IntervalTimerOverlay.exe you can double-click.
-         Needs the Windows App SDK 1.6 runtime on the machine (VS installs it). For a portable
+         Needs the Windows App SDK runtime on the machine (VS installs it). For a portable
          copy, publish with -p:WindowsAppSDKSelfContained=true -p:SelfContained=true. -->
     <WindowsPackageType>None</WindowsPackageType>
+    <!-- Custom Program.Main handles AppInstance single-instance redirection before XAML starts. -->
+    <DefineConstants>$(DefineConstants);DISABLE_XAML_GENERATED_MAIN</DefineConstants>
   </PropertyGroup>
 
   <ItemGroup>
@@ -35,9 +36,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.WindowsAppSDK" Version="1.6.250228001" />
-    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.26100.1742" />
-    <PackageReference Include="H.NotifyIcon.WinUI" Version="2.2.0" />
+    <PackageReference Include="Microsoft.WindowsAppSDK" />
+    <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
+    <PackageReference Include="H.NotifyIcon.WinUI" />
   </ItemGroup>
 
   <ItemGroup>
@@ -49,10 +50,10 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <!-- Both are unsafe with this stack: trimming breaks reflection-based System.Text.Json,
-         and ReadyToRun triggers a CsWinRT 'ComInterfaceEntry' TypeLoadException in
-         self-contained publishes. Leave them off. -->
-    <PublishTrimmed>false</PublishTrimmed>
+    <!-- ReadyToRun triggers a CsWinRT 'ComInterfaceEntry' TypeLoadException in self-contained
+         publishes. Trimming is safe now that JsonSettingsStore uses a source-generated
+         serializer context, but leave it opt-in (-p:PublishTrimmed=true) and validated per build. -->
     <PublishReadyToRun>false</PublishReadyToRun>
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 </Project>
