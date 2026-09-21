@@ -149,7 +149,10 @@ Wrapped in try/catch so a missing audio device can't take down the timer.
 `IntervalTimerOverlay.csproj`:
 
 - `<WindowsPackageType>None</WindowsPackageType>` — the switch that makes it build a runnable
-  exe instead of an MSIX. Overridable: `dotnet publish -p:WindowsPackageType=MSIX`.
+  exe instead of an MSIX. To build an MSIX use `.\package-overlay.ps1` (repo root) — it runs
+  `dotnet build -p:Platform=<arch> -p:WindowsPackageType=MSIX -p:GenerateAppxPackageOnBuild=true`
+  per architecture. `dotnet publish -p:WindowsPackageType=MSIX` alone does **not** produce a
+  package — `dotnet publish` ignores `GenerateAppxPackageOnBuild` and just emits a loose exe.
 - `<DefineConstants>...;DISABLE_XAML_GENERATED_MAIN</DefineConstants>` — hands the entry point
   to `Program.cs`.
 - `<PublishTrimmed>false</PublishTrimmed>` — off by default; safe to opt in per build now that

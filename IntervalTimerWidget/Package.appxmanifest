@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 
 <Package
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
@@ -8,15 +8,15 @@
   IgnorableNamespaces="uap uap3 mp">
 
   <Identity
-    Name="JKara.IntervalTimerWidget"
-    Publisher="CN=JKara"
+    Name="22905TiberiusCN.TiberiusIntervalTimerWidget"
+    Publisher="CN=F7EC0415-9208-4EC7-8536-C8C52317E77B"
     Version="1.0.0.0" />
 
-  <mp:PhoneIdentity PhoneProductId="7d2c4f8a-1b3e-4a6c-9d5f-0e8b2c1a4f70" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="10c498b9-dc41-4893-aefb-5354ad534efc" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Interval Timer Widget</DisplayName>
-    <PublisherDisplayName>JKara</PublisherDisplayName>
+    <DisplayName>Tiberius Interval Timer Widget</DisplayName>
+    <PublisherDisplayName>TiberiusCN</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 

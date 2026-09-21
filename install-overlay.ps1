@@ -66,7 +66,7 @@ if ($Uninstall) {
 
 # ---------------------------------------------------------------- install
 $project = Join-Path $root 'IntervalTimerOverlay\IntervalTimerOverlay.csproj'
-$pubDir  = Join-Path $root 'IntervalTimerOverlay\bin\Release\net8.0-windows10.0.19041.0\win-x64\publish'
+$pubDir  = Join-Path $root 'IntervalTimerOverlay\bin\Release\net10.0-windows10.0.26100.0\win-x64\publish'
 
 Write-Host "Publishing self-contained build..." -ForegroundColor Cyan
 & dotnet publish $project -c Release -r win-x64 --self-contained `

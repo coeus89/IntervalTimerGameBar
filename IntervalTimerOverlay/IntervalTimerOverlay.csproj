@@ -55,5 +55,8 @@
          serializer context, but leave it opt-in (-p:PublishTrimmed=true) and validated per build. -->
     <PublishReadyToRun>false</PublishReadyToRun>
     <PublishTrimmed>false</PublishTrimmed>
+    <Authors>TiberiusCN</Authors>
+    <Company>TiberiusCN</Company>
+    <Product>Tiberius Interval Timer</Product>
   </PropertyGroup>
 </Project>
