@@ -43,12 +43,16 @@ So the widget is **classic UWP / .NET Native** — the only configuration the Ga
 supports. Everything modern (and everything the average user actually wants) is the
 **standalone WinUI 3 overlay**, which needs neither Game Bar nor pinning.
 
-## Why the widget isn't in the solution
+## Two solutions
 
-Visual Studio 2026 cannot load the legacy non-SDK UWP project format — it fails with
-`Unexpected null value of type 'IVsHierarchy'`. The project builds cleanly from MSBuild, so
-it's kept out of `IntervalTimerGameBar.sln` (which then opens fine with just the overlay +
-core) and is driven entirely by `build-widget.ps1`.
+| Solution | Projects | Build with |
+| --- | --- | --- |
+| `IntervalTimerWinUI.sln` | Core, Overlay, Tests | `dotnet` / VS 2026 / `build.ps1` |
+| `IntervalTimerWidget.sln` | Core, Widget | **VS 2022** + UWP workload / `build-widget.ps1` |
+
+The widget is kept out of the main solution because the .NET CLI can't build a classic
+non-SDK UWP project, and VS 2026's project system can't load one. VS 2022 (17.x) with the
+*Universal Windows Platform development* workload loads and builds it.
 
 ## The timing model
 
@@ -94,14 +98,16 @@ through `Windows.Media.Playback.MediaPlayer`:
 
 | Decision | Why |
 | --- | --- |
-| Shared `netstandard2.0` Core | The lowest common denominator UWP (.NET Native / C# 7.3) and .NET 8+ can both consume. |
+| Shared `netstandard2.0` Core | The lowest common denominator UWP (.NET Native / C# 7.3) and modern .NET both consume. C# 7.3 / nullable-disable is enforced in `IntervalTimer.Core.csproj`. |
 | Absolute-time engine, not a countdown | Drift-free; survives sleep and widget suspension. |
-| Widget = classic UWP | Only config the Game Bar `.winmd` works in. |
-| Widget out of the `.sln` | VS 2026 can't load legacy UWP projects. |
+| Widget = classic UWP | Only config the Game Bar `.winmd` works in. Built by VS 2022 only. |
+| Overlay on **.NET 10 + Windows App SDK 2.4** | Current LTS runtime; one modern stack. |
 | Overlay = unpackaged | So it's a plain double-click `.exe` — no MSIX, no cert, no registration. |
-| Overlay: no trimming, no ReadyToRun | Trimming breaks reflection-based `System.Text.Json`; R2R triggers a CsWinRT `ComInterfaceEntry` `TypeLoadException` in self-contained publishes. |
-| Overlay drag via `GetCursorPos` | Element-relative pointer coords feed back through the window move and jitter. |
-| Single-instance via `AppInstance` | The overlay hides to tray instead of exiting, so a second launch would stack a window. |
+| Overlay: no ReadyToRun | R2R triggers a CsWinRT `ComInterfaceEntry` `TypeLoadException` in self-contained publishes. Trimming is now safe (source-gen JSON) but stays opt-in. |
+| Overlay `JsonSettingsStore` uses `System.Text.Json` **source generation** | Trim/AOT-safe; `SettingsJsonContext`. |
+| Overlay drag via `GetCursorPos` | The window has no non-client area, so `InputNonClientPointerSource` caption regions don't apply. Screen coords avoid the feedback jitter that element-relative coords cause. |
+| Single-instance in **`Program.Main`** (`DISABLE_XAML_GENERATED_MAIN`) | `AppInstance` redirection runs before the XAML runtime starts, so a redundant launch exits cleanly with no half-built `App` — no `Process.Kill()`. |
+| Central package management | `Directory.Packages.props` at the repo root; `global.json` pins the SDK. The non-SDK widget opts out via nested `Directory.*.props`. |
 
 ## Per-project detail
 

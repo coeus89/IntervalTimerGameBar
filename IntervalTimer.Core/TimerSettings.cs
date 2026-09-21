@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 
 namespace IntervalTimer.Core
 {
@@ -70,19 +71,22 @@ namespace IntervalTimer.Core
             SoundKey = SoundCatalog.FromKey(SoundKey).Key;
         }
 
+        // Values may arrive as a boxed primitive (ApplicationData) or a string (JSON, INI).
+        // Always parse with the invariant culture so "0.8" never becomes 8 on a comma locale.
         private static int ToInt(object v, int fallback)
         {
-            try { return Convert.ToInt32(v); } catch { return fallback; }
+            try { return Convert.ToInt32(v, CultureInfo.InvariantCulture); } catch { return fallback; }
         }
 
         private static double ToDouble(object v, double fallback)
         {
-            try { return Convert.ToDouble(v); } catch { return fallback; }
+            try { return Convert.ToDouble(v, CultureInfo.InvariantCulture); } catch { return fallback; }
         }
 
         private static bool ToBool(object v, bool fallback)
         {
-            try { return Convert.ToBoolean(v); } catch { return fallback; }
+            if (v is string s) return bool.TryParse(s, out var b) ? b : fallback;
+            try { return Convert.ToBoolean(v, CultureInfo.InvariantCulture); } catch { return fallback; }
         }
     }
 }

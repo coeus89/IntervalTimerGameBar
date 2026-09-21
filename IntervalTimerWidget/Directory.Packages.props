@@ -1,0 +1,7 @@
+<Project>
+  <!-- Stops NuGet from climbing to the repo-root Directory.Packages.props. The widget keeps
+       inline <Version> on its <PackageReference>s. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

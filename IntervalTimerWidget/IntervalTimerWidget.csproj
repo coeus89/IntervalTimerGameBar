@@ -33,6 +33,9 @@
     <AppxBundlePlatforms>x64</AppxBundlePlatforms>
     <HoursBetweenUpdateChecks>0</HoursBetweenUpdateChecks>
     <LangVersion>7.3</LangVersion>
+    <GenerateTemporaryStoreCertificate>True</GenerateTemporaryStoreCertificate>
+    <AppxPackageSigningTimestampDigestAlgorithm>SHA256</AppxPackageSigningTimestampDigestAlgorithm>
+    <GenerateTestArtifacts>True</GenerateTestArtifacts>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
@@ -91,11 +94,21 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <!-- IntervalTimer.Core compiled from source (a ProjectReference to the modern-SDK-built
          netstandard2.0 lib drags incompatible facades into the package). -->
-    <Compile Include="..\IntervalTimer.Core\IntervalTimerEngine.cs"><Link>Core\IntervalTimerEngine.cs</Link></Compile>
-    <Compile Include="..\IntervalTimer.Core\IntervalTimerEvents.cs"><Link>Core\IntervalTimerEvents.cs</Link></Compile>
-    <Compile Include="..\IntervalTimer.Core\SoundCatalog.cs"><Link>Core\SoundCatalog.cs</Link></Compile>
-    <Compile Include="..\IntervalTimer.Core\TimerSettings.cs"><Link>Core\TimerSettings.cs</Link></Compile>
-    <Compile Include="..\IntervalTimer.Core\ISoundPlayer.cs"><Link>Core\ISoundPlayer.cs</Link></Compile>
+    <Compile Include="..\IntervalTimer.Core\IntervalTimerEngine.cs">
+      <Link>Core\IntervalTimerEngine.cs</Link>
+    </Compile>
+    <Compile Include="..\IntervalTimer.Core\IntervalTimerEvents.cs">
+      <Link>Core\IntervalTimerEvents.cs</Link>
+    </Compile>
+    <Compile Include="..\IntervalTimer.Core\SoundCatalog.cs">
+      <Link>Core\SoundCatalog.cs</Link>
+    </Compile>
+    <Compile Include="..\IntervalTimer.Core\TimerSettings.cs">
+      <Link>Core\TimerSettings.cs</Link>
+    </Compile>
+    <Compile Include="..\IntervalTimer.Core\ISoundPlayer.cs">
+      <Link>Core\ISoundPlayer.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -115,6 +128,7 @@
     <Content Include="Assets\Sounds\chime.wav" />
     <Content Include="Assets\Sounds\bell.wav" />
     <Content Include="Assets\Sounds\alarm.wav" />
+    <None Include="Package.StoreAssociation.xml" />
     <Content Include="Properties\Default.rd.xml" />
   </ItemGroup>
   <ItemGroup>

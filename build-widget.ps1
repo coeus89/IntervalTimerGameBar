@@ -2,7 +2,7 @@
 .SYNOPSIS
     Build (and optionally deploy) IntervalTimerWidget - the classic UWP Xbox Game Bar widget.
 
-    This project is intentionally NOT in IntervalTimerGameBar.sln: it's a legacy non-SDK
+    This project is intentionally NOT in IntervalTimerWinUI.sln: it's a legacy non-SDK
     UWP project that Visual Studio 2026's IDE cannot load ("Unexpected null value of type
     'IVsHierarchy'"), but which builds fine from MSBuild. Use this script instead of the IDE.
 

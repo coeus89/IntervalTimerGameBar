@@ -11,26 +11,55 @@ timing engine:
 
 Both are driven by **`IntervalTimer.Core`**, a small drift‑free scheduler.
 
-| Project | Type | In `.sln`? | Build with | Docs |
+| Project | Type | Solution | Build with | Docs |
 | --- | --- | --- | --- | --- |
-| `IntervalTimer.Core` | `netstandard2.0` class lib | ✅ | `dotnet` | [docs/IntervalTimer.Core.md](docs/IntervalTimer.Core.md) |
-| `IntervalTimerOverlay` | WinUI 3 desktop, **unpackaged** | ✅ | `run-overlay.ps1` / VS / `dotnet` | [docs/IntervalTimerOverlay.md](docs/IntervalTimerOverlay.md) |
-| `IntervalTimerWidget` | Classic UWP (.NET Native) | ❌ (see below) | `build-widget.ps1` | [docs/IntervalTimerWidget.md](docs/IntervalTimerWidget.md) |
-| `IntervalTimer.Core.Tests` | xUnit (`net8.0`) | ❌ | `dotnet test` | — |
+| `IntervalTimer.Core` | `netstandard2.0` class lib | both | `dotnet` | [docs/IntervalTimer.Core.md](docs/IntervalTimer.Core.md) |
+| `IntervalTimerOverlay` | WinUI 3, **.NET 10**, unpackaged | `IntervalTimerWinUI.sln` | `run-overlay.ps1` / VS 2026 / `dotnet` | [docs/IntervalTimerOverlay.md](docs/IntervalTimerOverlay.md) |
+| `IntervalTimer.Core.Tests` | xUnit, **net10.0** | `IntervalTimerWinUI.sln` | `dotnet test` | — |
+| `IntervalTimerWidget` | Classic UWP (.NET Native) | `IntervalTimerWidget.sln` | **VS 2022** / `build-widget.ps1` | [docs/IntervalTimerWidget.md](docs/IntervalTimerWidget.md) |
 
-**System overview:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+**System overview:** [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) ·
+**Everything at once:** `.\build.ps1`
+
+Package versions are centralized in `Directory.Packages.props`; the SDK is pinned by
+`global.json` (10.0.4xx). The non‑SDK widget opts out of both via its own nested
+`Directory.*.props`.
+
+**Windows-only.** Every project targets WinUI 3 / UWP; nothing here builds or runs on
+macOS/Linux. **Privacy policy:** [docs/PRIVACY.md](docs/PRIVACY.md). **License:** none committed yet —
+until one is added, treat the code as all-rights-reserved (ask the repo owner before reusing
+it elsewhere).
+
+### Fastest path (already have the .NET 10 SDK?)
+
+```powershell
+git clone <this-repo-url>
+cd IntervalTimerGameBar
+.\run-overlay.ps1
+```
+
+That's the whole overlay app — no MSIX, no Store, no Game Bar. Everything past this point is
+either filling in a prerequisite that command needs, or covers the widget / packaging /
+distribution paths.
 
 ---
 
 ## 1. Prerequisites
 
-### For the overlay + core (everything in the solution)
+> **First time running any `.ps1` script on this machine?** Windows' default PowerShell
+> execution policy (`Restricted`) blocks local scripts with *"...cannot be loaded because
+> running scripts is disabled on this system."* Fix once, per user, no admin needed:
+> ```powershell
+> Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+> ```
 
-- **.NET SDK 8+** (`dotnet --version`). .NET 10 SDK is fine.
-- **Windows App SDK 1.6 runtime** on the machine — Visual Studio installs it; a standalone
+### For the overlay + core (`IntervalTimerWinUI.sln`)
+
+- **.NET SDK 10.0.4xx** (`dotnet --version`; pinned by `global.json`).
+- **Windows App SDK 2.4 runtime** on the machine — Visual Studio installs it; a standalone
   installer is [here](https://learn.microsoft.com/windows/apps/windows-app-sdk/downloads).
   (Not needed if you use `run-overlay.ps1 -Portable` or `install-overlay.ps1`, which bundle it.)
-- Optional: **Visual Studio 2022/2026** with the *WinUI application development* workload for
+- Optional: **Visual Studio 2026** with the *WinUI application development* workload for
   F5 debugging and the XAML designer.
 
 ### Extra prerequisites for the Game Bar widget
@@ -84,20 +113,26 @@ Both are driven by **`IntervalTimer.Core`**, a small drift‑free scheduler.
 
 ## 2. Build & test
 
-### Solution (overlay + core)
+### Everything
 
 ```powershell
-dotnet build IntervalTimerGameBar.sln -c Debug -p:Platform=x64
+.\build.ps1                       # solution + tests + widget
+.\build.ps1 -Configuration Release -SkipWidget
+```
+
+### Overlay + core + tests
+
+```powershell
+dotnet build IntervalTimerWinUI.sln -c Debug
 dotnet test  IntervalTimer.Core.Tests
 ```
 
-Or open `IntervalTimerGameBar.sln` in Visual Studio and build/F5 `IntervalTimerOverlay`.
+Or open `IntervalTimerWinUI.sln` in Visual Studio 2026 and build/F5 `IntervalTimerOverlay`.
 
-### The Game Bar widget (script only)
+### The Game Bar widget
 
-The widget is **not in `IntervalTimerGameBar.sln`** — the .NET CLI and VS 2026 both choke on
-the classic UWP project. Open **`IntervalTimerWidget.sln`** in Visual Studio 2022 instead, or
-drive it from the command line:
+Open **`IntervalTimerWidget.sln`** in **Visual Studio 2022** (with the *Universal Windows
+Platform development* workload), or drive it from the command line:
 
 ```powershell
 .\build-widget.ps1                                  # Restore + Build, Debug|x64
@@ -201,12 +236,18 @@ ie4uinit.exe -show
 
 ## 6. Regenerate assets
 
-Both the sounds and the icons are generated by Python scripts (pure Pillow, no source art):
+**Not needed to build** — the generated `.wav`/`.png`/`.ico` files are committed to the repo
+(see `.gitignore`'s note). Only run these if you're changing the tones, icon, or colors.
+
+Both the sounds and the icons are generated by Python scripts:
 
 ```powershell
-python tools/gen_sounds.py     # 5 beep tones  -> <app>/Assets/Sounds/*.wav
+python tools/gen_sounds.py     # 5 beep tones  -> <app>/Assets/Sounds/*.wav   (stdlib only)
 python tools/gen_icons.py      # stopwatch icon -> <app>/Assets/*.png  + Overlay/Assets/app.ico
 ```
+
+`gen_icons.py` needs **Pillow**: `pip install pillow`. `gen_sounds.py` uses only the standard
+library.
 
 Tweak the tone list in `gen_sounds.py` / the colours and shape at the top of `gen_icons.py`,
 rerun, then rebuild. If you add or rename a sound, also update `SoundCatalog.All` in
@@ -221,8 +262,50 @@ rerun, then rebuild. If you add or rename a sound, also update `SoundCatalog.All
 | --- | --- |
 | This machine, Start menu | `install-overlay.ps1` |
 | Another machine, no installs | `run-overlay.ps1 -Portable` → zip the `…\win-x64\publish\` folder |
-| MSIX (overlay) | `dotnet publish IntervalTimerOverlay -p:WindowsPackageType=MSIX` — you'll have to trust its signing cert |
+| MSIX (overlay), any architecture | `.\package-overlay.ps1` — see below |
 | MSIX (widget) / Store | build Release with `build-widget.ps1 -Configuration Release`, sign the `.msix` under `AppPackages\`, submit via Partner Center |
+
+### Building overlay MSIX packages (`package-overlay.ps1`)
+
+Single-project MSIX packaging needs **`dotnet build`** (not `dotnet publish`) with
+`GenerateAppxPackageOnBuild=true` — `dotnet publish -p:WindowsPackageType=MSIX` alone silently
+produces a loose unpackaged exe, not a package.
+
+```powershell
+.\package-overlay.ps1                              # x64 + ARM64, Release
+.\package-overlay.ps1 -Platforms x64
+.\package-overlay.ps1 -Platforms x64,ARM64,x86 -Configuration Debug
+```
+
+Output, one `.msix` per architecture (no automatic multi-arch bundle — upload each file
+separately in the same Partner Center submission):
+
+```
+IntervalTimerOverlay\AppPackages\IntervalTimerOverlay_1.0.0.0_x64_Test\IntervalTimerOverlay_1.0.0.0_x64.msix
+IntervalTimerOverlay\AppPackages\IntervalTimerOverlay_1.0.0.0_ARM64_Test\IntervalTimerOverlay_1.0.0.0_ARM64.msix
+```
+
+**Visual Studio's packaging UI may not work.** In this environment neither the Solution
+Explorer "Publish ▸" context submenu nor "New profile ▸ Publish" surfaced an MSIX/Store
+target (only Azure/ClickOnce/Docker/Folder showed up — a project-system/workload gap, not a
+project misconfiguration). Use the script instead of chasing the wizard.
+
+**Before uploading to Partner Center**, `IntervalTimerOverlay/Package.appxmanifest`'s
+`Identity Name`, `Publisher`, and `Properties/DisplayName` must match your exact reservation —
+copy them from **Partner Center ▸ your app ▸ App management ▸ App identity** (a first failed
+upload also echoes back the exact expected values in its validation errors). Currently set to
+`Name="22905TiberiusCN.TiberiusIntervalTimer"`, `Publisher="CN=F7EC0415-9208-4EC7-8536-C8C52317E77B"`,
+`DisplayName="Tiberius Interval Timer"` — same publisher as `IntervalTimerWidget`. A mismatch
+on any of these fails package validation (*"Invalid package identity name"*, *"...publisher
+name"*, or *"uses a display name that you have not reserved"*). A `runFullTrust` capability
+warning at the same time is expected and doesn't block submission — Microsoft reviews and
+approves that capability during their normal process.
+
+Partner Center also requires a **Privacy policy URL** during submission (Store listing ▸
+Properties). [docs/PRIVACY.md](docs/PRIVACY.md) in this repo covers both apps, but needs a
+*public* URL to paste in there — e.g. GitHub's raw file link
+(`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/docs/PRIVACY.md`) or a GitHub
+Pages page. A local file path won't work there.
 
 ---
 
@@ -243,15 +326,21 @@ rerun, then rebuild. If you add or rename a sound, also update `SoundCatalog.All
 ## 9. Repository layout
 
 ```
-IntervalTimerGameBar.sln          overlay + core + tests (NOT the widget)
-build-widget.ps1                   build/deploy the Game Bar widget
+IntervalTimerWinUI.sln             Core + Overlay + Tests   (dotnet / VS 2026)
+IntervalTimerWidget.sln            Core + Widget            (VS 2022 only)
+global.json                        pins the .NET SDK
+Directory.Build.props              shared props for the SDK-style projects
+Directory.Packages.props           central NuGet versions
+build.ps1                          build the solution + tests + widget
+build-widget.ps1                   build/deploy just the Game Bar widget
 run-overlay.ps1                    build + run the overlay exe
 install-overlay.ps1                install the overlay as a Start-menu app
+package-overlay.ps1                build overlay MSIX packages (x64 / ARM64 / x86)
 tools/gen_sounds.py                generate Assets/Sounds/*.wav
 tools/gen_icons.py                 generate the icon set + app.ico
-docs/                              architecture documentation
+docs/                              architecture documentation + PRIVACY.md
 IntervalTimer.Core/                shared engine, settings, sound catalog
-IntervalTimer.Core.Tests/          xUnit tests for the engine
-IntervalTimerOverlay/              WinUI 3 standalone app
-IntervalTimerWidget/               classic UWP Game Bar widget
+IntervalTimer.Core.Tests/          xUnit tests
+IntervalTimerOverlay/              WinUI 3 standalone app  (Program.cs = custom Main)
+IntervalTimerWidget/               classic UWP Game Bar widget (nested Directory.*.props opt-out)
 ```

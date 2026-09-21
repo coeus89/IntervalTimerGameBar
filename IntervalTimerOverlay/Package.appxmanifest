@@ -8,15 +8,15 @@
   IgnorableNamespaces="uap rescap">
 
   <Identity
-    Name="JKara.IntervalTimerOverlay"
-    Publisher="CN=JKara"
+    Name="22905TiberiusCN.TiberiusIntervalTimer"
+    Publisher="CN=F7EC0415-9208-4EC7-8536-C8C52317E77B"
     Version="1.0.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="65e3b464-b566-4cb7-8451-2f6bf905c4ba" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>Interval Timer Overlay</DisplayName>
-    <PublisherDisplayName>JKara</PublisherDisplayName>
+    <DisplayName>Tiberius Interval Timer</DisplayName>
+    <PublisherDisplayName>TiberiusCN</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
 

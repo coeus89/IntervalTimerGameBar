@@ -1,0 +1,28 @@
+<Project>
+
+  <!--
+    Central package versions for the SDK-style projects. Edit versions here, not in the
+    .csproj files.
+
+    IntervalTimerWidget.csproj is a classic non-SDK project - it ignores this file and keeps
+    its own inline <Version> on Microsoft.Gaming.XboxGameBar / Microsoft.NETCore.
+    UniversalWindowsPlatform. Keep those in sync by hand if they ever need to change.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Overlay (WinUI 3) -->
+    <PackageVersion Include="Microsoft.WindowsAppSDK" Version="2.4.0" />
+    <PackageVersion Include="Microsoft.Windows.SDK.BuildTools" Version="10.0.28000.2705" />
+    <PackageVersion Include="H.NotifyIcon.WinUI" Version="2.4.1" />
+
+    <!-- Tests -->
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="xunit" Version="2.9.3" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
+  </ItemGroup>
+
+</Project>
