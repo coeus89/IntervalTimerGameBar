@@ -26,7 +26,7 @@ Package versions are centralized in `Directory.Packages.props`; the SDK is pinne
 `Directory.*.props`.
 
 **Windows-only.** Every project targets WinUI 3 / UWP; nothing here builds or runs on
-macOS/Linux. **Privacy policy:** [PRIVACY.md](PRIVACY.md). **License:** none committed yet —
+macOS/Linux. **Privacy policy:** [docs/PRIVACY.md](docs/PRIVACY.md). **License:** none committed yet —
 until one is added, treat the code as all-rights-reserved (ask the repo owner before reusing
 it elsewhere).
 
@@ -302,10 +302,10 @@ warning at the same time is expected and doesn't block submission — Microsoft 
 approves that capability during their normal process.
 
 Partner Center also requires a **Privacy policy URL** during submission (Store listing ▸
-Properties). [PRIVACY.md](PRIVACY.md) in this repo covers both apps, but needs a *public* URL
-to paste in there — e.g. GitHub's raw file link
-(`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/PRIVACY.md`) or a GitHub Pages
-page. A local file path won't work there.
+Properties). [docs/PRIVACY.md](docs/PRIVACY.md) in this repo covers both apps, but needs a
+*public* URL to paste in there — e.g. GitHub's raw file link
+(`https://raw.githubusercontent.com/<owner>/<repo>/<branch>/docs/PRIVACY.md`) or a GitHub
+Pages page. A local file path won't work there.
 
 ---
 
@@ -328,7 +328,6 @@ page. A local file path won't work there.
 ```
 IntervalTimerWinUI.sln             Core + Overlay + Tests   (dotnet / VS 2026)
 IntervalTimerWidget.sln            Core + Widget            (VS 2022 only)
-PRIVACY.md                         privacy policy for both apps (Store submission needs a public URL to it)
 global.json                        pins the .NET SDK
 Directory.Build.props              shared props for the SDK-style projects
 Directory.Packages.props           central NuGet versions
@@ -339,7 +338,7 @@ install-overlay.ps1                install the overlay as a Start-menu app
 package-overlay.ps1                build overlay MSIX packages (x64 / ARM64 / x86)
 tools/gen_sounds.py                generate Assets/Sounds/*.wav
 tools/gen_icons.py                 generate the icon set + app.ico
-docs/                              architecture documentation
+docs/                              architecture documentation + PRIVACY.md
 IntervalTimer.Core/                shared engine, settings, sound catalog
 IntervalTimer.Core.Tests/          xUnit tests
 IntervalTimerOverlay/              WinUI 3 standalone app  (Program.cs = custom Main)

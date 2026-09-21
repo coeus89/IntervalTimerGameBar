@@ -64,7 +64,7 @@ including children, because neither app collects information at all.
 ## Changes to this policy
 
 If this policy changes, the updated version will be committed to this repository
-([PRIVACY.md](PRIVACY.md)) and reflected in the Store listing before the change takes effect.
+([docs/PRIVACY.md](PRIVACY.md)) and reflected in the Store listing before the change takes effect.
 
 ## Contact
 
