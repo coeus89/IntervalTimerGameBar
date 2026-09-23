@@ -33,7 +33,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="IntervalTimerWidget.App">
       <uap:VisualElements
-        DisplayName="Interval Timer"
+        DisplayName="Interval Timer Widget"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="Beeps every X seconds while you game"
