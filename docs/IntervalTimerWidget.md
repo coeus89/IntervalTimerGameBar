@@ -174,14 +174,24 @@ RootGrid  (Background swapped Transparent <-> #EE1B1B1F at runtime)
 ```
 
 - **Collapsed by default** so the settings aren't on screen during a game — only the
-  countdown + Start/Stop show. The ⚙ `ToggleButton` expands/collapses `SettingsPanel` and
-  calls `ApplicationView.TryResizeView` to grow/shrink the Game Bar window between
-  `CollapsedHeight` (96) and `ExpandedHeight` (340). The manifest `MinHeight` is 88 so Game
-  Bar allows the collapsed size.
+  countdown + Start/Stop show. The ⚙ `ToggleButton` expands/collapses `SettingsPanel`, then
+  `ResizeToFitContent()` grows/shrinks the Game Bar window to match.
+- **`ResizeToFitContent()`** measures `RootGrid` with an unconstrained height and asks the
+  SDK to resize to that. Two things matter here:
+  - It must use **`XboxGameBarWidget.TryResizeWindowAsync`**, not
+    `ApplicationView.TryResizeView` — Game Bar hosts the widget in its own frame, so the
+    generic UWP view-resize call is ignored.
+  - It has to **measure**, not read `ActualHeight` — the window is still at the old height
+    when the toggle fires, so the live layout reports the clipped size, not the wanted one.
+
+  The result is clamped to the widget's `MinWindowSize` / `MaxWindowSize` (which Game Bar
+  populates from the manifest's `<Size>` block: 88–440 high), so the content drives the size
+  instead of hardcoded constants.
 - **"Transparent background"** (persisted as `TimerSettings.TransparentBackground`, default
-  on) switches `RootGrid.Background` between `Colors.Transparent` (the game shows through —
-  needs `<AllowForegroundTransparency>` in the manifest, which is set) and a solid dark
-  panel.
+  **off**) switches `RootGrid.Background` between `Colors.Transparent` (the game shows
+  through — needs `<AllowForegroundTransparency>` in the manifest, which is set) and a solid
+  dark panel. It starts opaque so the widget is visible on first run; the choice persists
+  once changed.
 - The `ComboBox` has **no `DisplayMemberPath`** — it relies on `SoundInfo.ToString()`,
   because `DisplayMemberPath` binding uses reflection that .NET Native / a future AOT pass
   can trim.

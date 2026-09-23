@@ -5,7 +5,6 @@ using Microsoft.Gaming.XboxGameBar;
 using Windows.Foundation;
 using Windows.UI;
 using Windows.UI.Core;
-using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -19,8 +18,6 @@ namespace IntervalTimerWidget
         private const string RunningKey = "IsRunning";
         private const string NextFireKey = "NextFireUtcTicks";
 
-        private const double CollapsedHeight = 96;
-        private const double ExpandedHeight = 340;
         private const double WidgetWidth = 300;
 
         private static readonly Brush PanelBrush =
@@ -73,7 +70,7 @@ namespace IntervalTimerWidget
             ApplyBackground();
             // Start collapsed so the settings aren't on screen during a game.
             SettingsPanel.Visibility = Visibility.Collapsed;
-            RequestResize(false);
+            ResizeToFitContent();
 
             // Resume a schedule that was running before the widget was suspended.
             object runningObj, nextObj;
@@ -130,16 +127,39 @@ namespace IntervalTimerWidget
             RootGrid.Background = _settings.TransparentBackground ? ClearBrush : PanelBrush;
         }
 
-        private void RequestResize(bool expanded)
+        /// <summary>
+        /// Grows/shrinks the Game Bar window to whatever the current content needs, so opening
+        /// the settings panel reveals it instead of clipping it.
+        /// </summary>
+        private async void ResizeToFitContent()
         {
+            // Game Bar hosts the widget in its own frame: ApplicationView.TryResizeView is ignored
+            // there, only the widget SDK can move the host window.
+            if (_widget == null) return;
+
             try
             {
-                ApplicationView.GetForCurrentView()?.TryResizeView(
-                    new Size(WidgetWidth, expanded ? ExpandedHeight : CollapsedHeight));
+                double width = WidgetWidth;
+                var window = Window.Current;
+                if (window != null && window.Bounds.Width > 0) width = window.Bounds.Width;
+
+                // The live window is still at the old height, so ActualHeight would just report
+                // the clipped size - measure unconstrained to get the height the content wants.
+                RootGrid.UpdateLayout();
+                RootGrid.Measure(new Size(width, double.PositiveInfinity));
+                var height = Math.Ceiling(RootGrid.DesiredSize.Height);
+
+                // Honour the Size bounds declared in Package.appxmanifest.
+                var max = _widget.MaxWindowSize.Height;
+                var min = _widget.MinWindowSize.Height;
+                if (max > 0) height = Math.Min(height, max);
+                if (min > 0) height = Math.Max(height, min);
+
+                await _widget.TryResizeWindowAsync(new Size(width, height));
             }
             catch
             {
-                // No view (e.g. running before activation) - Game Bar sizes from the manifest.
+                // Resize is best-effort - a refused request just leaves the manifest size.
             }
         }
 
@@ -161,7 +181,7 @@ namespace IntervalTimerWidget
         {
             var open = SettingsToggle.IsChecked == true;
             SettingsPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            RequestResize(open);
+            ResizeToFitContent();
         }
 
         private void OnTransparentChanged(object sender, RoutedEventArgs e)
