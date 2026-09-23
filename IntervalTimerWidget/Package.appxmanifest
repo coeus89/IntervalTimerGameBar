@@ -10,7 +10,7 @@
   <Identity
     Name="22905TiberiusCN.TiberiusIntervalTimerWidget"
     Publisher="CN=F7EC0415-9208-4EC7-8536-C8C52317E77B"
-    Version="1.0.0.0" />
+    Version="1.1.0.0" />
 
   <mp:PhoneIdentity PhoneProductId="10c498b9-dc41-4893-aefb-5354ad534efc" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
