@@ -23,8 +23,9 @@
           │  MediaSoundPlayer       │   │  UwpSoundPlayer            │
           │  H.NotifyIcon (tray)    │   │  Microsoft.Gaming.XboxGameBar
           │  AppInstance (1 inst.)  │   │  App.OnActivated (protocol)│
+          │                         │   │  App.OnLaunched (Start)    │
           └─────────────────────────┘   └────────────────────────────┘
-                    Start menu / .exe          Win+G  →  widget menu
+                    Start menu / .exe      Win+G → widget menu, or Start
 ```
 
 Everything timing-related lives in **Core**. The two front ends are thin: they build the UI,

@@ -5,6 +5,7 @@ using Microsoft.Gaming.XboxGameBar;
 using Windows.Foundation;
 using Windows.UI;
 using Windows.UI.Core;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -19,6 +20,10 @@ namespace IntervalTimerWidget
         private const string NextFireKey = "NextFireUtcTicks";
 
         private const double WidgetWidth = 300;
+
+        // Standalone fallback for the <Size> bounds Game Bar supplies when it hosts us.
+        private const double MinWindowHeight = 88;
+        private const double MaxWindowHeight = 440;
 
         private static readonly Brush PanelBrush =
             new SolidColorBrush(Color.FromArgb(0xEE, 0x1B, 0x1B, 0x1F));
@@ -133,10 +138,6 @@ namespace IntervalTimerWidget
         /// </summary>
         private async void ResizeToFitContent()
         {
-            // Game Bar hosts the widget in its own frame: ApplicationView.TryResizeView is ignored
-            // there, only the widget SDK can move the host window.
-            if (_widget == null) return;
-
             try
             {
                 double width = WidgetWidth;
@@ -149,17 +150,29 @@ namespace IntervalTimerWidget
                 RootGrid.Measure(new Size(width, double.PositiveInfinity));
                 var height = Math.Ceiling(RootGrid.DesiredSize.Height);
 
-                // Honour the Size bounds declared in Package.appxmanifest.
-                var max = _widget.MaxWindowSize.Height;
-                var min = _widget.MinWindowSize.Height;
+                // Hosted: Game Bar publishes the manifest's <Size> bounds. Standalone: use the
+                // same numbers so both hosts land on the same compact layout.
+                var min = _widget != null ? _widget.MinWindowSize.Height : MinWindowHeight;
+                var max = _widget != null ? _widget.MaxWindowSize.Height : MaxWindowHeight;
                 if (max > 0) height = Math.Min(height, max);
                 if (min > 0) height = Math.Max(height, min);
 
-                await _widget.TryResizeWindowAsync(new Size(width, height));
+                var size = new Size(width, height);
+                if (_widget != null)
+                {
+                    // Game Bar hosts us in its own frame, where ApplicationView.TryResizeView is
+                    // ignored - only the widget SDK can move that window.
+                    await _widget.TryResizeWindowAsync(size);
+                }
+                else
+                {
+                    var view = ApplicationView.GetForCurrentView();
+                    if (view != null) view.TryResizeView(size);
+                }
             }
             catch
             {
-                // Resize is best-effort - a refused request just leaves the manifest size.
+                // Resize is best-effort - a refused request just leaves the current size.
             }
         }
 

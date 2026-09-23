@@ -1,6 +1,8 @@
 using System;
 using Windows.ApplicationModel;
 using Windows.ApplicationModel.Activation;
+using Windows.Foundation;
+using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
@@ -57,9 +59,12 @@ namespace IntervalTimerWidget
             Window.Current.Closed -= OnWidgetWindowClosed;
         }
 
+        /// <summary>
+        /// Launched from Start rather than through Game Bar. Same page, ordinary app window,
+        /// no <see cref="XboxGameBarWidget"/> - WidgetPage treats a null widget as standalone.
+        /// </summary>
         protected override void OnLaunched(LaunchActivatedEventArgs e)
         {
-            // The app is widget-only (AppListEntry="none"); a normal launch just shows an info page.
             var rootFrame = Window.Current.Content as Frame;
             if (rootFrame == null)
             {
@@ -71,6 +76,14 @@ namespace IntervalTimerWidget
             {
                 if (rootFrame.Content == null)
                     rootFrame.Navigate(typeof(WidgetPage), null);
+
+                // UWP's default minimum view is 500x320 - far bigger than the timer needs, and
+                // it would block the page from sizing itself down to the compact layout.
+                ApplicationView.GetForCurrentView().SetPreferredMinSize(new Size(260, 88));
+                ApplicationView.PreferredLaunchViewSize = new Size(300, 160);
+                ApplicationView.PreferredLaunchWindowingMode =
+                    ApplicationViewWindowingMode.PreferredLaunchViewSize;
+
                 Window.Current.Activate();
             }
         }

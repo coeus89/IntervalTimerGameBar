@@ -7,7 +7,8 @@ timing engine:
   (modern WinUI 3, runs as a plain `.exe`). Does everything: set an interval, pick a sound,
   it floats over your game and beeps. No pinning, no Game Bar.
 - **`IntervalTimerWidget`** — a real Xbox Game Bar widget (classic UWP). Lives in the `Win+G`
-  overlay; **pin it** to keep it beeping once the overlay is dismissed.
+  overlay; **pin it** to keep it beeping once the overlay is dismissed. Also launches from the
+  Start menu as an ordinary window.
 
 Both are driven by **`IntervalTimer.Core`**, a small drift‑free scheduler.
 
@@ -185,13 +186,17 @@ Settings are stored in `%LOCALAPPDATA%\IntervalTimerOverlay\settings.json`.
 output (`Add-AppxPackage -Register` — no signing needed, just Developer Mode), and restarts
 Game Bar so it re‑scans its widget list.
 
-Then:
+Then, **in Game Bar**:
 
 1. Press `Win+G`.
 2. Click the **widget menu** button in the Game Bar toolbar.
 3. Pick **Interval Timer** (click the ⭐ to keep it on the bar).
 4. Set interval / sound / volume, press **Start**.
 5. **Pin** the widget (pin icon in its title bar) so it keeps beeping after you dismiss Game Bar.
+
+…or **as a normal window**: search **Interval Timer** in the Start menu. Same UI in an
+ordinary resizable app window, no Game Bar involved. Both entry points share one settings
+store, so the interval/sound you set in one carries over to the other.
 
 > **Do not double‑click the `.msix`.** It's signed with a throwaway test certificate, so a
 > plain install fails with `0x800B010A`. Always deploy via `build-widget.ps1 -Deploy`.
