@@ -21,6 +21,10 @@ A standalone always-on-top desktop overlay + system-tray icon. Modern WinUI 3, b
 | `JsonSettingsStore.cs` | `ISettingsStore` over a JSON file in `%LOCALAPPDATA%` (source-gen serializer) |
 | `MediaSoundPlayer.cs` | `ISoundPlayer` via `Windows.Media.Playback.MediaPlayer` |
 | `TransparentBackdrop.cs` | fully transparent `SystemBackdrop` for the "Transparent background" option |
+| `CustomSoundStore.cs` | imports/lists/deletes the one user sound under `%LOCALAPPDATA%\IntervalTimerOverlay\Sounds` |
+| `ISpeechProvider.cs` / `WindowsSpeechProvider.cs` | text-to-speech seam; offline `SpeechSynthesizer` impl |
+| `VoiceOption.cs` | one selectable TTS voice for the UI |
+| `AlertPlayer.cs` | plays sound and/or speech per `TimerSettings.AnnouncementMode` |
 | `app.manifest` | `PerMonitorV2` DPI awareness, Win10+ compat GUIDs |
 | `Package.appxmanifest` | only used if you publish `-p:WindowsPackageType=MSIX` |
 | `Assets/app.ico` | embedded via `<ApplicationIcon>`; also the tray icon |
@@ -146,9 +150,29 @@ Root Grid  (Background swapped Transparent <-> #EE1B1B1F at runtime)
 └─ ContentGrid (measured by ResizeToFitContent)
    ├─ Header  (drag strip)      "INTERVAL TIMER"  ⚙(toggle)  –(hide)  ✕(quit)
    ├─ Countdown row             CountdownText (Consolas 34)   Start/Stop button
-   └─ SettingsPanel (collapsed) NumberBox interval · ComboBox sound · Slider volume + Test
+   └─ SettingsPanel (ScrollViewer, MaxHeight 320, collapsed)
+                                NumberBox interval · ComboBox sound (built-ins + import)
+                                · Import sound file... / Remove · Slider volume + Test
+                                · Announcement mode · voice · phrase · speaking rate · Test announcement
                                 · Transparent background check · AutoStart check
 ```
+
+### Custom sounds and spoken announcements
+
+Same features as the widget (see `IntervalTimerWidget.md`), adapted for an unpackaged app:
+
+- **`CustomSoundStore`** uses plain `System.IO` under `%LOCALAPPDATA%\IntervalTimerOverlay\Sounds`
+  (no `ApplicationData` without package identity). One file at most (≤ 50 MB, ≤ 5 s,
+  `.wav .mp3 .m4a .aac .wma .flac`); a new import replaces the old one. The `FileOpenPicker`
+  needs `InitializeWithWindow.Initialize(picker, hwnd)` in a desktop app. Duration is read with
+  `MediaSource.OpenAsync()` → `Duration`. `Delete` refuses any path outside the sounds folder.
+- **`MediaSoundPlayer`** opens file paths, not `SoundInfo.PlaybackUri` — `ms-appx:` /
+  `ms-appdata:` need a package. `PlayAndWaitAsync` backs the sound-then-speech mode.
+- **`AlertPlayer.PlayAsync`** takes the *resolved* `SoundInfo` (`SoundCatalog.Resolve` against
+  the current import), because `TimerSettings.Sound` only knows the built-ins.
+- `_loading` starts `true`: the speaking-rate slider's XAML `Value` fires `ValueChanged` during
+  `InitializeComponent`, which would otherwise save defaults over the user's settings.
+- The spoken phrase is saved as it's typed, and once more in `ExitApp()`.
 
 The sound `ComboBox` has no `DisplayMemberPath` — like the widget it relies on
 `SoundInfo.ToString()`, which keeps it working under trimming.

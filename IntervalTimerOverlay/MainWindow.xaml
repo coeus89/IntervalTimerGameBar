@@ -62,33 +62,53 @@
                         Click="OnStartStop" />
             </StackPanel>
 
-            <!-- Settings panel -->
-            <StackPanel x:Name="SettingsPanel" Grid.Row="2" Spacing="8" Visibility="Collapsed">
-                <Grid ColumnSpacing="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <NumberBox x:Name="IntervalBox" Grid.Column="0" Header="Beep every (seconds)"
+            <!-- Settings panel; scrolls because the content can exceed the window's max height -->
+            <ScrollViewer x:Name="SettingsPanel" Grid.Row="2" Visibility="Collapsed" MaxHeight="320"
+                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="8" Padding="0,0,12,0">
+                    <NumberBox x:Name="IntervalBox" Header="Beep every (seconds)"
                                Minimum="1" Maximum="86400" SmallChange="1" LargeChange="10"
                                SpinButtonPlacementMode="Inline" ValueChanged="OnIntervalChanged" />
-                </Grid>
-                <ComboBox x:Name="SoundBox" Header="Sound" HorizontalAlignment="Stretch"
-                          SelectionChanged="OnSoundChanged" />
-                <Grid ColumnSpacing="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <Slider x:Name="VolumeSlider" Grid.Column="0" Header="Volume" Minimum="0" Maximum="100"
-                            ValueChanged="OnVolumeChanged" />
-                    <Button Grid.Column="1" Content="Test" VerticalAlignment="Bottom" Click="OnTestSound" />
-                </Grid>
-                <CheckBox x:Name="TransparentCheck" Content="Transparent background"
-                          Checked="OnTransparentChanged" Unchecked="OnTransparentChanged" />
-                <CheckBox x:Name="AutoStartCheck" Content="Start timer when app opens"
-                          Checked="OnAutoStartChanged" Unchecked="OnAutoStartChanged" />
-            </StackPanel>
+                    <ComboBox x:Name="SoundBox" Header="Sound" HorizontalAlignment="Stretch"
+                              SelectionChanged="OnSoundChanged" />
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Button x:Name="ImportSoundButton" Grid.Column="0" Content="Import sound file..."
+                                HorizontalAlignment="Stretch" Click="OnImportSound" />
+                        <Button x:Name="DeleteSoundButton" Grid.Column="1" Content="Remove" IsEnabled="False"
+                                Click="OnDeleteSound" />
+                    </Grid>
+                    <Grid ColumnSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <Slider x:Name="VolumeSlider" Grid.Column="0" Header="Volume" Minimum="0" Maximum="100"
+                                ValueChanged="OnVolumeChanged" />
+                        <Button Grid.Column="1" Content="Test" VerticalAlignment="Bottom" Click="OnTestSound" />
+                    </Grid>
+
+                    <!-- Announcement (sound vs. speech on each interval boundary) -->
+                    <ComboBox x:Name="AnnouncementModeBox" Header="Announcement" HorizontalAlignment="Stretch"
+                              SelectionChanged="OnAnnouncementModeChanged" />
+                    <ComboBox x:Name="VoiceBox" HorizontalAlignment="Stretch"
+                              SelectionChanged="OnVoiceChanged" />
+                    <TextBox x:Name="SpeechTextBox" LostFocus="OnSpeechTextCommitted"
+                             TextChanged="OnSpeechTextChanged" />
+                    <TextBlock Text="Tokens: {interval}, {count}, {time}" FontSize="11" Opacity="0.6" />
+                    <Slider x:Name="SpeechRateSlider" Header="Speaking rate" Minimum="50" Maximum="200" Value="100"
+                            ValueChanged="OnSpeechRateChanged" />
+                    <Button Content="Test announcement" Click="OnTestAnnouncement" />
+
+                    <CheckBox x:Name="TransparentCheck" Content="Transparent background"
+                              Checked="OnTransparentChanged" Unchecked="OnTransparentChanged" />
+                    <CheckBox x:Name="AutoStartCheck" Content="Start timer when app opens"
+                              Checked="OnAutoStartChanged" Unchecked="OnAutoStartChanged" />
+                </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </Window>
