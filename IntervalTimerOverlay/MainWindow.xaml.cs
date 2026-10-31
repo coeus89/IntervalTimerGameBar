@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using IntervalTimer.Core;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Windowing;
@@ -29,14 +31,35 @@ namespace IntervalTimerOverlay
             new SolidColorBrush(Windows.UI.Color.FromArgb(0xEE, 0x1B, 0x1B, 0x1F));
         private static readonly Brush ClearBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
 
+        /// <summary>Friendly labels for <see cref="AnnouncementMode"/>, in display order.</summary>
+        private static readonly AnnouncementModeItem[] AnnouncementModeItems =
+        {
+            new(AnnouncementMode.Sound, "Sound only"),
+            new(AnnouncementMode.Speech, "Speak only"),
+            new(AnnouncementMode.SoundThenSpeech, "Sound, then speak"),
+        };
+
         private readonly JsonSettingsStore _store = new();
         private readonly IntervalTimerEngine _engine = new();
         private readonly MediaSoundPlayer _sound = new();
+        private readonly CustomSoundStore _customSounds = new();
+        private readonly WindowsSpeechProvider _speechProvider = new();
+        private readonly AlertPlayer _alert;
         private readonly DispatcherQueue _ui;
 
         private AppWindow _appWindow = null!;
         private TimerSettings _settings = new();
-        private bool _loading;
+        private IReadOnlyList<SoundInfo> _availableSounds = Array.Empty<SoundInfo>();
+        // True until LoadSettings applies the saved values. Sliders with a XAML Value fire
+        // ValueChanged during InitializeComponent and would otherwise persist their defaults.
+        private bool _loading = true;
+        private int _announceCount;
+
+        /// <summary>Wraps an <see cref="AnnouncementMode"/> with a user-facing label for the ComboBox.</summary>
+        private sealed record AnnouncementModeItem(AnnouncementMode Mode, string Label)
+        {
+            public override string ToString() => Label;
+        }
 
         // drag state — tracked in screen pixels so moving the window doesn't feed back
         // into the pointer position (which is what caused the jitter).
@@ -62,6 +85,7 @@ namespace IntervalTimerOverlay
         {
             this.InitializeComponent();
             _ui = this.DispatcherQueue;
+            _alert = new AlertPlayer(_sound, _speechProvider);
 
             ConfigureWindow();
             LoadSettings();
@@ -219,19 +243,63 @@ namespace IntervalTimerOverlay
             TransparentCheck.IsChecked = _settings.TransparentBackground;
             AutoStartCheck.IsChecked = _settings.AutoStart;
 
-            SoundBox.ItemsSource = SoundCatalog.All;
-            SoundBox.SelectedItem = _settings.Sound;
+            AnnouncementModeBox.ItemsSource = AnnouncementModeItems;
+            AnnouncementModeBox.SelectedItem =
+                AnnouncementModeItems.FirstOrDefault(i => i.Mode == _settings.AnnouncementMode) ?? AnnouncementModeItems[0];
+
+            VoiceBox.ItemsSource = _speechProvider.Voices;
+            VoiceBox.SelectedItem =
+                _speechProvider.Voices.FirstOrDefault(v => v.Id == _settings.VoiceId) ?? _speechProvider.Voices.FirstOrDefault();
+
+            SpeechTextBox.Text = _settings.SpeechText;
+            SpeechRateSlider.Value = _settings.SpeechRate * 100.0;
+            UpdateSpeechControlsEnabled();
 
             _engine.IntervalSeconds = _settings.IntervalSeconds;
             _loading = false;
+
+            LoadSounds();
+        }
+
+        /// <summary>Re-reads the custom-sounds folder and rebuilds the sound ComboBox (built-ins first, then the import).</summary>
+        private void LoadSounds()
+        {
+            IReadOnlyList<SoundInfo> custom;
+            try { custom = _customSounds.List(_settings.SoundKey); }
+            catch { custom = Array.Empty<SoundInfo>(); }
+
+            _availableSounds = SoundCatalog.All.Concat(custom.Where(s => s.IsCustom).Take(1)).ToList();
+
+            _loading = true;
+            SoundBox.ItemsSource = _availableSounds;
+            SoundBox.SelectedItem = SoundCatalog.Resolve(_settings.SoundKey, custom);
+            _loading = false;
+
+            UpdateDeleteSoundButtonState();
+        }
+
+        /// <summary>The sound to play: the saved key resolved against built-ins plus the current import.</summary>
+        private SoundInfo CurrentSound => SoundCatalog.Resolve(_settings.SoundKey, _availableSounds);
+
+        private void UpdateDeleteSoundButtonState() =>
+            DeleteSoundButton.IsEnabled = SoundBox.SelectedItem is SoundInfo { IsCustom: true };
+
+        private void UpdateSpeechControlsEnabled()
+        {
+            var enabled = _settings.AnnouncementMode != AnnouncementMode.Sound;
+            VoiceBox.IsEnabled = enabled;
+            SpeechTextBox.IsEnabled = enabled;
+            SpeechRateSlider.IsEnabled = enabled;
         }
 
         private void WireEngine()
         {
             _engine.Tick += (_, e) => _ui.TryEnqueue(() => UpdateUi(e.Remaining, e.IsRunning));
-            _engine.Elapsed += (_, _) => _ui.TryEnqueue(() =>
+            _engine.Elapsed += (_, _) => _ui.TryEnqueue(async () =>
             {
-                _sound.Play(_settings.Sound, _settings.Volume);
+                _announceCount++;
+                var context = new AnnouncementContext(_engine.Interval, _announceCount, DateTime.Now);
+                await _alert.PlayAsync(_settings, CurrentSound, context);
                 PersistRunState();
             });
         }
@@ -298,6 +366,7 @@ namespace IntervalTimerOverlay
 
         private void ToggleTimer()
         {
+            if (!_engine.IsRunning) _announceCount = 0;
             _engine.Toggle();
             PersistRunState();
         }
@@ -317,6 +386,96 @@ namespace IntervalTimerOverlay
             if (_loading || SoundBox.SelectedItem is not SoundInfo s) return;
             _settings.SoundKey = s.Key;
             SaveSettings();
+            UpdateDeleteSoundButtonState();
+        }
+
+        private async void OnImportSound(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var imported = await _customSounds.ImportAsync(WindowNative.GetWindowHandle(this));
+                if (imported == null) return; // user cancelled the picker
+
+                _settings.SoundKey = imported.Key;
+                SaveSettings();
+                LoadSounds();
+                ResizeToFitContent();
+            }
+            catch (InvalidOperationException ex)
+            {
+                await new ContentDialog
+                {
+                    XamlRoot = Root.XamlRoot,
+                    Title = "Can't use that sound",
+                    Content = ex.Message,
+                    CloseButtonText = "OK",
+                }.ShowAsync();
+            }
+            catch
+            {
+                // A picker or copy failure leaves the current sound in place.
+            }
+        }
+
+        private void OnDeleteSound(object sender, RoutedEventArgs e)
+        {
+            if (SoundBox.SelectedItem is not SoundInfo { IsCustom: true } selected) return;
+
+            _customSounds.Delete(selected);
+            if (string.Equals(_settings.SoundKey, selected.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                _settings.SoundKey = SoundCatalog.Default.Key;
+                SaveSettings();
+            }
+
+            LoadSounds();
+            ResizeToFitContent();
+        }
+
+        private void OnAnnouncementModeChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_loading || AnnouncementModeBox.SelectedItem is not AnnouncementModeItem item) return;
+            _settings.AnnouncementMode = item.Mode;
+            SaveSettings();
+            UpdateSpeechControlsEnabled();
+        }
+
+        private void OnVoiceChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_loading || VoiceBox.SelectedItem is not VoiceOption voice) return;
+            _settings.VoiceId = voice.Id;
+            SaveSettings();
+        }
+
+        private void OnSpeechTextChanged(object sender, TextChangedEventArgs e) => CommitSpeechText();
+
+        private void OnSpeechTextCommitted(object sender, RoutedEventArgs e)
+        {
+            CommitSpeechText();
+            if (_loading) return;
+            if (string.IsNullOrWhiteSpace(SpeechTextBox.Text))
+                SpeechTextBox.Text = _settings.SpeechText;
+        }
+
+        private void CommitSpeechText()
+        {
+            if (_loading) return;
+            var text = SpeechTextBox.Text;
+            _settings.SpeechText = string.IsNullOrWhiteSpace(text) ? AnnouncementFormatter.DefaultTemplate : text;
+            SaveSettings();
+        }
+
+        private void OnSpeechRateChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        {
+            if (_loading) return;
+            _settings.SpeechRate = e.NewValue / 100.0;
+            SaveSettings();
+        }
+
+        private async void OnTestAnnouncement(object sender, RoutedEventArgs e)
+        {
+            var context = new AnnouncementContext(_engine.Interval, Math.Max(_announceCount, 1), DateTime.Now);
+            await _alert.PlayAsync(_settings, CurrentSound, context);
         }
 
         private void OnVolumeChanged(object sender, Microsoft.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -342,7 +501,7 @@ namespace IntervalTimerOverlay
         }
 
         private void OnTestSound(object sender, RoutedEventArgs e) =>
-            _sound.Play(_settings.Sound, _settings.Volume);
+            _sound.Play(SoundBox.SelectedItem as SoundInfo ?? CurrentSound, _settings.Volume);
 
         private void OnSettingsToggled(object sender, RoutedEventArgs e)
         {
@@ -365,11 +524,14 @@ namespace IntervalTimerOverlay
 
         private void ExitApp()
         {
+            CommitSpeechText();
             // Persist before stopping, so a timer that was running resumes on next launch.
             PersistRunState();
             _engine.Stop();
             _engine.Dispose();
+            _alert.Dispose();
             _sound.Dispose();
+            _speechProvider.Dispose();
             TrayIcon.Dispose();
             Application.Current.Exit();
         }
