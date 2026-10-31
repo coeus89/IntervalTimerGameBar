@@ -50,7 +50,9 @@ namespace IntervalTimerWidget
         private XboxGameBarWidget _widget;
         private TimerSettings _settings = new TimerSettings();
         private IReadOnlyList<SoundInfo> _availableSounds = Array.Empty<SoundInfo>();
-        private bool _loading;
+        // True until OnLoaded applies the saved settings. The slider's initial value
+        // otherwise fires ValueChanged during InitializeComponent and would persist 50.
+        private bool _loading = true;
         private int _announceCount;
 
         public WidgetPage()
@@ -162,10 +164,12 @@ namespace IntervalTimerWidget
         private async Task LoadSoundsAsync()
         {
             IReadOnlyList<SoundInfo> custom;
-            try { custom = await _customSounds.ListAsync(); }
+            try { custom = await _customSounds.ListAsync(_settings.SoundKey); }
             catch { custom = Array.Empty<SoundInfo>(); }
 
-            _availableSounds = SoundCatalog.All.Concat(custom).ToList();
+            // Built-ins always stay in the list. The custom folder contributes at most one extra entry.
+            var imported = custom.Where(s => s.IsCustom).Take(1);
+            _availableSounds = SoundCatalog.All.Concat(imported).ToList();
 
             _loading = true;
             SoundBox.ItemsSource = _availableSounds;
@@ -381,9 +385,14 @@ namespace IntervalTimerWidget
                 UpdateDeleteSoundButtonState();
                 ResizeToFitContent();
             }
+            catch (InvalidOperationException ex)
+            {
+                var dialog = new Windows.UI.Popups.MessageDialog(ex.Message, "Can't use that sound");
+                await dialog.ShowAsync();
+            }
             catch
             {
-                // Best-effort: a rejected/too-large file just leaves the list unchanged.
+                // A picker or copy failure leaves the current sound in place.
             }
         }
 

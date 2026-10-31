@@ -98,7 +98,7 @@
                         <TextBlock Text="Tokens: {interval}, {count}, {time}" FontSize="11" Opacity="0.6" />
                         <StackPanel>
                             <TextBlock Text="Speaking rate" FontSize="12" Opacity="0.7" />
-                            <Slider x:Name="SpeechRateSlider" Minimum="50" Maximum="200" ValueChanged="OnSpeechRateChanged" />
+                            <Slider x:Name="SpeechRateSlider" Minimum="50" Maximum="200" Value="100" ValueChanged="OnSpeechRateChanged" />
                         </StackPanel>
                         <Button Content="Test announcement" Click="OnTestAnnouncement" />
                     </StackPanel>

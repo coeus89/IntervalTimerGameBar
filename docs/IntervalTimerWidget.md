@@ -187,10 +187,13 @@ RootGrid  (Background swapped Transparent <-> #EE1B1B1F at runtime)
 
 ### Custom sounds
 
-`CustomSoundStore` imports user-picked audio files (`.wav .mp3 .m4a .aac .wma .flac`, capped at
-5 MB) into `ApplicationData.Current.LocalFolder\Sounds` via `FileOpenPicker` + `StorageFile.CopyAsync`.
-That folder is the only source of truth — there's no separate index — so `ListAsync()` just
-enumerates it. `SoundCatalog.Custom(fileName)` builds the catalog entry (key `"custom:<fileName>"`);
+`CustomSoundStore` imports one user-picked audio file (`.wav .mp3 .m4a .aac .wma .flac`) into
+`ApplicationData.Current.LocalFolder\Sounds`. The file must be 50 MB or smaller and 5 seconds or
+shorter; anything else is rejected before it is copied. That local folder holds the one custom
+file only — a new import deletes the previous custom file, and `ListAsync` does the same if an
+older build left more than one behind. The five packaged defaults (`Assets\Sounds`) are not in
+that folder, are never deleted, and always stay at the top of the picker.
+`SoundCatalog.Custom(fileName)` builds the catalog entry (key `"custom:<fileName>"`);
 `SoundInfo.PlaybackUri` resolves custom sounds to `ms-appdata:///local/Sounds/<fileName>` instead of
 the packaged `ms-appx:///Assets/Sounds/<fileName>` used for built-ins. `TimerSettings.Normalize()`
 leaves a `custom:` key alone (unlike a built-in key, it can't be validated without knowing which
