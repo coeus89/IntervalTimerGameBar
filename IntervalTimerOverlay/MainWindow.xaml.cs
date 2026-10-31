@@ -6,6 +6,7 @@ using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
+using Microsoft.UI.Xaml.Media;
 using Microsoft.UI.Xaml.Media.Imaging;
 using Windows.Graphics;
 using WinRT.Interop;
@@ -16,6 +17,17 @@ namespace IntervalTimerOverlay
     {
         private const string PosXKey = "WindowX";
         private const string PosYKey = "WindowY";
+        private const string RunningKey = "IsRunning";
+        private const string NextFireKey = "NextFireUtcTicks";
+
+        // Design size in DIPs; AppWindow works in physical pixels, so these get scaled by DPI.
+        private const double WindowWidth = 320;
+        private const double MinWindowHeight = 88;
+        private const double MaxWindowHeight = 440;
+
+        private static readonly Brush PanelBrush =
+            new SolidColorBrush(Windows.UI.Color.FromArgb(0xEE, 0x1B, 0x1B, 0x1F));
+        private static readonly Brush ClearBrush = new SolidColorBrush(Microsoft.UI.Colors.Transparent);
 
         private readonly JsonSettingsStore _store = new();
         private readonly IntervalTimerEngine _engine = new();
@@ -61,9 +73,84 @@ namespace IntervalTimerOverlay
                 TrayIcon.IconSource = new BitmapImage(new Uri(ico));
             TrayIcon.ForceCreate();
 
-            if (_settings.AutoStart)
-                _engine.Start();
+            ApplyBackground();
+            Root.Loaded += (_, _) =>
+            {
+                ResizeToFitContent();
+                // Moving to a monitor with a different scale changes the pixel size we need.
+                Root.XamlRoot.Changed += (_, _) => ResizeToFitContent();
+            };
+
+            RestoreRunState();
             UpdateUi(_engine.Remaining, _engine.IsRunning);
+        }
+
+        /// <summary>
+        /// Resume a schedule that was running when the app last exited, so the countdown picks up
+        /// where it left off instead of restarting; otherwise honour AutoStart.
+        /// </summary>
+        private void RestoreRunState()
+        {
+            var wasRunning = _store.TryGet(RunningKey, out var runningObj) && runningObj is true;
+            if (wasRunning && _store.TryGet(NextFireKey, out var nextObj))
+            {
+                try
+                {
+                    var next = new DateTime(Convert.ToInt64(nextObj), DateTimeKind.Utc);
+                    if (next > DateTime.UtcNow)
+                        _engine.ResumeAt(next);
+                    else
+                        _engine.Start();
+                }
+                catch { _engine.Start(); }
+            }
+            else if (_settings.AutoStart)
+            {
+                _engine.Start();
+            }
+        }
+
+        private void PersistRunState()
+        {
+            _store.Set(RunningKey, _engine.IsRunning);
+            _store.Set(NextFireKey, _engine.NextFireUtc.Ticks);
+        }
+
+        private void ApplyBackground()
+        {
+            var transparent = _settings.TransparentBackground;
+            Root.Background = transparent ? ClearBrush : PanelBrush;
+            if (transparent)
+            {
+                if (SystemBackdrop is not TransparentBackdrop)
+                    SystemBackdrop = new TransparentBackdrop();
+            }
+            else
+            {
+                SystemBackdrop = null;
+            }
+        }
+
+        /// <summary>
+        /// Grows/shrinks the window to whatever the current content needs, so opening the
+        /// settings panel reveals it instead of clipping it.
+        /// </summary>
+        private void ResizeToFitContent()
+        {
+            var xamlRoot = Root.XamlRoot;
+            if (xamlRoot is null) return;
+
+            // The live window is still at the old height, so ActualHeight would just report
+            // the clipped size - measure unconstrained to get the height the content wants.
+            ContentGrid.UpdateLayout();
+            ContentGrid.Measure(new Windows.Foundation.Size(WindowWidth, double.PositiveInfinity));
+            var height = Math.Ceiling(ContentGrid.DesiredSize.Height);
+            height = Math.Clamp(height, MinWindowHeight, MaxWindowHeight);
+
+            var scale = xamlRoot.RasterizationScale;
+            _appWindow.Resize(new SizeInt32(
+                (int)Math.Ceiling(WindowWidth * scale),
+                (int)Math.Ceiling(height * scale)));
         }
 
         private void ConfigureWindow()
@@ -129,6 +216,7 @@ namespace IntervalTimerOverlay
 
             IntervalBox.Value = _settings.IntervalSeconds;
             VolumeSlider.Value = _settings.Volume * 100.0;
+            TransparentCheck.IsChecked = _settings.TransparentBackground;
             AutoStartCheck.IsChecked = _settings.AutoStart;
 
             SoundBox.ItemsSource = SoundCatalog.All;
@@ -142,7 +230,10 @@ namespace IntervalTimerOverlay
         {
             _engine.Tick += (_, e) => _ui.TryEnqueue(() => UpdateUi(e.Remaining, e.IsRunning));
             _engine.Elapsed += (_, _) => _ui.TryEnqueue(() =>
-                _sound.Play(_settings.Sound, _settings.Volume));
+            {
+                _sound.Play(_settings.Sound, _settings.Volume);
+                PersistRunState();
+            });
         }
 
         private void WireDrag()
@@ -201,9 +292,15 @@ namespace IntervalTimerOverlay
 
         // ---- control handlers ----
 
-        private void OnStartStop(object sender, RoutedEventArgs e) => _engine.Toggle();
+        private void OnStartStop(object sender, RoutedEventArgs e) => ToggleTimer();
 
-        private void OnTrayToggle(object sender, RoutedEventArgs e) => _engine.Toggle();
+        private void OnTrayToggle(object sender, RoutedEventArgs e) => ToggleTimer();
+
+        private void ToggleTimer()
+        {
+            _engine.Toggle();
+            PersistRunState();
+        }
 
         private void OnIntervalChanged(NumberBox sender, NumberBoxValueChangedEventArgs e)
         {
@@ -212,6 +309,7 @@ namespace IntervalTimerOverlay
             _settings.IntervalSeconds = secs;
             _engine.IntervalSeconds = secs;
             SaveSettings();
+            PersistRunState();
         }
 
         private void OnSoundChanged(object sender, SelectionChangedEventArgs e)
@@ -225,6 +323,14 @@ namespace IntervalTimerOverlay
         {
             if (_loading) return;
             _settings.Volume = e.NewValue / 100.0;
+            SaveSettings();
+        }
+
+        private void OnTransparentChanged(object sender, RoutedEventArgs e)
+        {
+            if (_loading) return;
+            _settings.TransparentBackground = TransparentCheck.IsChecked == true;
+            ApplyBackground();
             SaveSettings();
         }
 
@@ -242,7 +348,7 @@ namespace IntervalTimerOverlay
         {
             var open = SettingsToggle.IsChecked == true;
             SettingsPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            _appWindow.Resize(new SizeInt32(320, open ? 340 : 148));
+            ResizeToFitContent();
         }
 
         private void OnHideToTray(object sender, RoutedEventArgs e) => _appWindow.Hide();
@@ -259,6 +365,8 @@ namespace IntervalTimerOverlay
 
         private void ExitApp()
         {
+            // Persist before stopping, so a timer that was running resumes on next launch.
+            PersistRunState();
             _engine.Stop();
             _engine.Dispose();
             _sound.Dispose();
