@@ -133,10 +133,15 @@ if ($Deploy) {
 
     # A dev (loose) registration can't be replaced in place when the manifest changed but the
     # version didn't ("package is already installed. Increment the version number..."), so
-    # remove the old registration first.
-    Get-AppxPackage -Name 'JKara.IntervalTimerWidget' -EA 0 | ForEach-Object {
-        Write-Host "Removing previous registration $($_.Version)..." -ForegroundColor DarkGray
-        Remove-AppxPackage -Package $_.PackageFullName -EA 0
+    # remove the old registration first. The identity is the manifest Name; the JKara name is
+    # the previous identity, removed too so an older install doesn't block this one.
+    foreach ($packageName in @(
+            '22905TiberiusCN.TiberiusIntervalTimerWidget',
+            'JKara.IntervalTimerWidget')) {
+        Get-AppxPackage -Name $packageName -EA 0 | ForEach-Object {
+            Write-Host "Removing previous registration $($_.Name) $($_.Version)..." -ForegroundColor DarkGray
+            Remove-AppxPackage -Package $_.PackageFullName -EA 0
+        }
     }
 
     Write-Host "`nRegistering widget for the current user..." -ForegroundColor Cyan

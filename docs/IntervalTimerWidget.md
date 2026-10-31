@@ -230,7 +230,7 @@ the widget is a packaged app.
 1. Build → loose AppX layout at `bin\x64\Debug\AppxManifest.xml`.
 2. `Add-AppxPackage` the `Microsoft.NET.CoreRuntime/CoreFramework/Native` dependency `.appx`
    files from `AppPackages\…\Dependencies\x64\`.
-3. **`Remove-AppxPackage`** any existing `JKara.IntervalTimerWidget` registration first — a
+3. **`Remove-AppxPackage`** any existing `22905TiberiusCN.TiberiusIntervalTimerWidget` registration first (and the older `JKara.IntervalTimerWidget` identity) — a
    dev (loose) registration cannot be replaced in place when the manifest changed but the
    `Version` didn't (*"the package is already installed. Increment the version number…"*).
 4. `Add-AppxPackage -Register bin\x64\Debug\AppxManifest.xml` — registers the loose build,

@@ -90,7 +90,7 @@ namespace IntervalTimerWidget
 
         private void OnNavigationFailed(object sender, NavigationFailedEventArgs e)
         {
-            throw new Exception("Failed to load Page " + e.SourcePageType.FullName);
+            throw new Exception("Failed to load Page " + e.SourcePageType.FullName, e.Exception);
         }
 
         private void OnSuspending(object sender, SuspendingEventArgs e)

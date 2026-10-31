@@ -124,7 +124,7 @@ distribution paths.
 ### Overlay + core + tests
 
 ```powershell
-dotnet build IntervalTimerWinUI.sln -c Debug
+dotnet build IntervalTimerWinUI.sln -c Debug -p:Platform=x64
 dotnet test  IntervalTimer.Core.Tests
 ```
 

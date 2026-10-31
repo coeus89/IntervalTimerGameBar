@@ -140,9 +140,15 @@ namespace IntervalTimerWidget
         {
             try
             {
+                // Game Bar's frame already has a bounded width (manifest min/max). A Start-menu
+                // window does not — Windows restores the last size, which can be most of the
+                // screen — so standalone always uses the compact design width.
                 double width = WidgetWidth;
-                var window = Window.Current;
-                if (window != null && window.Bounds.Width > 0) width = window.Bounds.Width;
+                if (_widget != null)
+                {
+                    var window = Window.Current;
+                    if (window != null && window.Bounds.Width > 0) width = window.Bounds.Width;
+                }
 
                 // The live window is still at the old height, so ActualHeight would just report
                 // the clipped size - measure unconstrained to get the height the content wants.
