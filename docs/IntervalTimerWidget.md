@@ -79,8 +79,11 @@ protected override void OnActivated(IActivatedEventArgs args)
 
 - `new XboxGameBarWidget(args, CoreWindow, frame)` opens the private IPC channel to Game Bar
   and **must be held for the process lifetime** (`_widget` field).
-- `OnLaunched` (a plain launch — rare, since `AppListEntry="none"`) just shows the same page
-  with no widget object.
+- `OnLaunched` handles a **plain launch from Start** — the same `WidgetPage` in an ordinary
+  app window, with no widget object (`e.Parameter` is null). It also calls
+  `SetPreferredMinSize(260×88)`, because UWP's default 500×320 minimum would stop the page
+  shrinking to the compact layout, and sets `PreferredLaunchViewSize` so the window opens
+  small instead of at UWP's default size.
 - `OnSuspending` nulls `_widget`. When the last widget window closes Game Bar suspends the
   process; there's no `Window.Closed` for the final window, only `OnSuspending`.
 
@@ -111,7 +114,9 @@ Two things beyond a normal UWP manifest:
 ```
 
 `Name` **must** be exactly `microsoft.gameBarUIExtension` — that's the contract Game Bar
-enumerates. `AppListEntry="none"` on `VisualElements` keeps it out of the Start menu.
+enumerates. Game Bar finds the widget through this extension, *not* through the app list, so
+`VisualElements` deliberately carries **no `AppListEntry="none"`**: the app shows up in Start
+and runs as a normal window too. Both entry points work at once.
 
 ### 2. Proxy/stub registration (a **package-level** `<Extensions>`, after `</Applications>`)
 
@@ -174,14 +179,24 @@ RootGrid  (Background swapped Transparent <-> #EE1B1B1F at runtime)
 ```
 
 - **Collapsed by default** so the settings aren't on screen during a game — only the
-  countdown + Start/Stop show. The ⚙ `ToggleButton` expands/collapses `SettingsPanel` and
-  calls `ApplicationView.TryResizeView` to grow/shrink the Game Bar window between
-  `CollapsedHeight` (96) and `ExpandedHeight` (340). The manifest `MinHeight` is 88 so Game
-  Bar allows the collapsed size.
+  countdown + Start/Stop show. The ⚙ `ToggleButton` expands/collapses `SettingsPanel`, then
+  `ResizeToFitContent()` grows/shrinks the Game Bar window to match.
+- **`ResizeToFitContent()`** measures `RootGrid` with an unconstrained height and asks the
+  SDK to resize to that. Two things matter here:
+  - It must use **`XboxGameBarWidget.TryResizeWindowAsync`**, not
+    `ApplicationView.TryResizeView` — Game Bar hosts the widget in its own frame, so the
+    generic UWP view-resize call is ignored.
+  - It has to **measure**, not read `ActualHeight` — the window is still at the old height
+    when the toggle fires, so the live layout reports the clipped size, not the wanted one.
+
+  The result is clamped to the widget's `MinWindowSize` / `MaxWindowSize` (which Game Bar
+  populates from the manifest's `<Size>` block: 88–440 high), so the content drives the size
+  instead of hardcoded constants.
 - **"Transparent background"** (persisted as `TimerSettings.TransparentBackground`, default
-  on) switches `RootGrid.Background` between `Colors.Transparent` (the game shows through —
-  needs `<AllowForegroundTransparency>` in the manifest, which is set) and a solid dark
-  panel.
+  **off**) switches `RootGrid.Background` between `Colors.Transparent` (the game shows
+  through — needs `<AllowForegroundTransparency>` in the manifest, which is set) and a solid
+  dark panel. It starts opaque so the widget is visible on first run; the choice persists
+  once changed.
 - The `ComboBox` has **no `DisplayMemberPath`** — it relies on `SoundInfo.ToString()`,
   because `DisplayMemberPath` binding uses reflection that .NET Native / a future AOT pass
   can trim.
@@ -215,7 +230,7 @@ the widget is a packaged app.
 1. Build → loose AppX layout at `bin\x64\Debug\AppxManifest.xml`.
 2. `Add-AppxPackage` the `Microsoft.NET.CoreRuntime/CoreFramework/Native` dependency `.appx`
    files from `AppPackages\…\Dependencies\x64\`.
-3. **`Remove-AppxPackage`** any existing `JKara.IntervalTimerWidget` registration first — a
+3. **`Remove-AppxPackage`** any existing `22905TiberiusCN.TiberiusIntervalTimerWidget` registration first (and the older `JKara.IntervalTimerWidget` identity) — a
    dev (loose) registration cannot be replaced in place when the manifest changed but the
    `Version` didn't (*"the package is already installed. Increment the version number…"*).
 4. `Add-AppxPackage -Register bin\x64\Debug\AppxManifest.xml` — registers the loose build,

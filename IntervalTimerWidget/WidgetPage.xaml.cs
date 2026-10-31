@@ -19,9 +19,11 @@ namespace IntervalTimerWidget
         private const string RunningKey = "IsRunning";
         private const string NextFireKey = "NextFireUtcTicks";
 
-        private const double CollapsedHeight = 96;
-        private const double ExpandedHeight = 340;
         private const double WidgetWidth = 300;
+
+        // Standalone fallback for the <Size> bounds Game Bar supplies when it hosts us.
+        private const double MinWindowHeight = 88;
+        private const double MaxWindowHeight = 440;
 
         private static readonly Brush PanelBrush =
             new SolidColorBrush(Color.FromArgb(0xEE, 0x1B, 0x1B, 0x1F));
@@ -73,7 +75,7 @@ namespace IntervalTimerWidget
             ApplyBackground();
             // Start collapsed so the settings aren't on screen during a game.
             SettingsPanel.Visibility = Visibility.Collapsed;
-            RequestResize(false);
+            ResizeToFitContent();
 
             // Resume a schedule that was running before the widget was suspended.
             object runningObj, nextObj;
@@ -130,16 +132,53 @@ namespace IntervalTimerWidget
             RootGrid.Background = _settings.TransparentBackground ? ClearBrush : PanelBrush;
         }
 
-        private void RequestResize(bool expanded)
+        /// <summary>
+        /// Grows/shrinks the Game Bar window to whatever the current content needs, so opening
+        /// the settings panel reveals it instead of clipping it.
+        /// </summary>
+        private async void ResizeToFitContent()
         {
             try
             {
-                ApplicationView.GetForCurrentView()?.TryResizeView(
-                    new Size(WidgetWidth, expanded ? ExpandedHeight : CollapsedHeight));
+                // Game Bar's frame already has a bounded width (manifest min/max). A Start-menu
+                // window does not — Windows restores the last size, which can be most of the
+                // screen — so standalone always uses the compact design width.
+                double width = WidgetWidth;
+                if (_widget != null)
+                {
+                    var window = Window.Current;
+                    if (window != null && window.Bounds.Width > 0) width = window.Bounds.Width;
+                }
+
+                // The live window is still at the old height, so ActualHeight would just report
+                // the clipped size - measure unconstrained to get the height the content wants.
+                RootGrid.UpdateLayout();
+                RootGrid.Measure(new Size(width, double.PositiveInfinity));
+                var height = Math.Ceiling(RootGrid.DesiredSize.Height);
+
+                // Hosted: Game Bar publishes the manifest's <Size> bounds. Standalone: use the
+                // same numbers so both hosts land on the same compact layout.
+                var min = _widget != null ? _widget.MinWindowSize.Height : MinWindowHeight;
+                var max = _widget != null ? _widget.MaxWindowSize.Height : MaxWindowHeight;
+                if (max > 0) height = Math.Min(height, max);
+                if (min > 0) height = Math.Max(height, min);
+
+                var size = new Size(width, height);
+                if (_widget != null)
+                {
+                    // Game Bar hosts us in its own frame, where ApplicationView.TryResizeView is
+                    // ignored - only the widget SDK can move that window.
+                    await _widget.TryResizeWindowAsync(size);
+                }
+                else
+                {
+                    var view = ApplicationView.GetForCurrentView();
+                    if (view != null) view.TryResizeView(size);
+                }
             }
             catch
             {
-                // No view (e.g. running before activation) - Game Bar sizes from the manifest.
+                // Resize is best-effort - a refused request just leaves the current size.
             }
         }
 
@@ -161,7 +200,7 @@ namespace IntervalTimerWidget
         {
             var open = SettingsToggle.IsChecked == true;
             SettingsPanel.Visibility = open ? Visibility.Visible : Visibility.Collapsed;
-            RequestResize(open);
+            ResizeToFitContent();
         }
 
         private void OnTransparentChanged(object sender, RoutedEventArgs e)

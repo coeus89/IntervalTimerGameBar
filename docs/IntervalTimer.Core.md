@@ -94,7 +94,7 @@ interface ISettingsStore
 
 `TimerSettings` fields: `IntervalSeconds` (default 60), `SoundKey` (default `"beep"`),
 `Volume` (0–1, default 0.8), `AutoStart` (default false), `TransparentBackground` (default
-true — used only by the widget).
+false — used only by the widget).
 
 - `Load(store)` reads the five keys, coerces each with `Convert.ToInt32/ToDouble/ToBoolean`
   **using `CultureInfo.InvariantCulture`** inside a try/catch (a bad value falls back to the

@@ -15,7 +15,7 @@ namespace IntervalTimer.Core.Tests
             Assert.Equal(SoundCatalog.Default.Key, s.SoundKey);
             Assert.Equal(TimerSettings.DefaultVolume, s.Volume);
             Assert.False(s.AutoStart);
-            Assert.True(s.TransparentBackground);
+            Assert.False(s.TransparentBackground);
         }
 
         [Fact]
@@ -28,7 +28,7 @@ namespace IntervalTimer.Core.Tests
                 SoundKey = "chime",
                 Volume = 0.33,
                 AutoStart = true,
-                TransparentBackground = false,
+                TransparentBackground = true,
             };
 
             original.Save(store);
@@ -38,7 +38,7 @@ namespace IntervalTimer.Core.Tests
             Assert.Equal("chime", loaded.SoundKey);
             Assert.Equal(0.33, loaded.Volume, 3);
             Assert.True(loaded.AutoStart);
-            Assert.False(loaded.TransparentBackground);
+            Assert.True(loaded.TransparentBackground);
         }
 
         [Theory]

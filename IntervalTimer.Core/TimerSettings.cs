@@ -27,7 +27,7 @@ namespace IntervalTimer.Core
         public bool AutoStart { get; set; }
 
         /// <summary>Game Bar widget: see-through background (show the game behind) vs a solid panel.</summary>
-        public bool TransparentBackground { get; set; } = true;
+        public bool TransparentBackground { get; set; }
 
         public SoundInfo Sound => SoundCatalog.FromKey(SoundKey);
 

@@ -35,8 +35,16 @@ namespace IntervalTimerOverlay
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool GetCursorPos(out POINT lpPoint);
 
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr MonitorFromRect(ref RECT lprc, uint dwFlags);
+
+        private const uint MonitorDefaultToNull = 0;
+
         [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
         private struct POINT { public int X; public int Y; }
+
+        [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+        private struct RECT { public int Left; public int Top; public int Right; public int Bottom; }
 
         public MainWindow()
         {
@@ -78,11 +86,20 @@ namespace IntervalTimerOverlay
 
             _appWindow.IsShownInSwitchers = false;
 
-            // Restore last position.
+            // Restore last position, but only if it still overlaps a connected display.
+            // AppWindow.Move succeeds for off-screen coordinates, and this window has no
+            // taskbar button, so a removed monitor would otherwise leave it unreachable.
             if (_store.TryGet(PosXKey, out var x) && _store.TryGet(PosYKey, out var y))
             {
-                try { _appWindow.Move(new PointInt32(Convert.ToInt32(x), Convert.ToInt32(y))); }
-                catch { /* off-screen monitor removed, etc. */ }
+                try
+                {
+                    var px = Convert.ToInt32(x);
+                    var py = Convert.ToInt32(y);
+                    var size = _appWindow.Size;
+                    if (OverlapsADisplay(px, py, size.Width, size.Height))
+                        _appWindow.Move(new PointInt32(px, py));
+                }
+                catch { /* corrupt saved coordinates */ }
             }
 
             // The window never really closes; the tray "Exit" item ends the process.
@@ -91,6 +108,18 @@ namespace IntervalTimerOverlay
                 e.Cancel = true;
                 _appWindow.Hide();
             };
+        }
+
+        private static bool OverlapsADisplay(int x, int y, int width, int height)
+        {
+            var rect = new RECT
+            {
+                Left = x,
+                Top = y,
+                Right = x + Math.Max(width, 1),
+                Bottom = y + Math.Max(height, 1)
+            };
+            return MonitorFromRect(ref rect, MonitorDefaultToNull) != IntPtr.Zero;
         }
 
         private void LoadSettings()
