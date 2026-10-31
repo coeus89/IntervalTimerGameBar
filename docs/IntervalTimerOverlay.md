@@ -20,6 +20,7 @@ A standalone always-on-top desktop overlay + system-tray icon. Modern WinUI 3, b
 | `MainWindow.xaml` / `.cs` | the whole overlay UI + behaviour |
 | `JsonSettingsStore.cs` | `ISettingsStore` over a JSON file in `%LOCALAPPDATA%` (source-gen serializer) |
 | `MediaSoundPlayer.cs` | `ISoundPlayer` via `Windows.Media.Playback.MediaPlayer` |
+| `TransparentBackdrop.cs` | fully transparent `SystemBackdrop` for the "Transparent background" option |
 | `app.manifest` | `PerMonitorV2` DPI awareness, Win10+ compat GUIDs |
 | `Package.appxmanifest` | only used if you publish `-p:WindowsPackageType=MSIX` |
 | `Assets/app.ico` | embedded via `<ApplicationIcon>`; also the tray icon |
@@ -58,8 +59,12 @@ Gets the `AppWindow` via `WindowNative.GetWindowHandle` → `Win32Interop.GetWin
 - `IsShownInSwitchers = false` — no taskbar button / Alt-Tab entry (the tray icon is the
   handle instead)
 
-Size: 320×148 collapsed, 320×340 with the settings panel open. Position is restored from the
-`WindowX` / `WindowY` settings keys (wrapped in try/catch — a removed monitor is ignored).
+Size is content-driven, like the widget's `ResizeToFitContent()`: `ContentGrid` is measured
+at the 320-DIP design width with an unconstrained height, clamped to 88–440 DIPs, then scaled
+by `XamlRoot.RasterizationScale` (`AppWindow.Resize` takes physical pixels). It runs on
+`Root.Loaded`, whenever ⚙ toggles the settings panel, and on `XamlRoot.Changed` (dragging to a
+monitor with a different scale). Position is restored from the `WindowX` / `WindowY` settings
+keys, but only if the saved rect still overlaps a connected display.
 
 `AppWindow.Closing` is cancelled and turned into `Hide()` — the process only ends via the ✕
 button or the tray **Exit** item (both call `ExitApp()`, which stops+disposes the engine,
@@ -87,30 +92,66 @@ coordinates are independent of the window position, so the delta is stable.
 
 ```csharp
 _engine.Tick    += (_, e) => _ui.TryEnqueue(() => UpdateUi(e.Remaining, e.IsRunning));
-_engine.Elapsed += (_, _) => _ui.TryEnqueue(() => _sound.Play(_settings.Sound, _settings.Volume));
+_engine.Elapsed += (_, _) => _ui.TryEnqueue(() => { _sound.Play(_settings.Sound, _settings.Volume); PersistRunState(); });
 ```
 
 `_ui` is `this.DispatcherQueue`. `UpdateUi` sets the countdown text (`mm:ss`, or `h:mm:ss`
 past an hour), the Start/Stop button label, and the tray menu's toggle label.
 
+### Resuming a running timer
+
+Same scheme as the widget's suspend/resume, using the same keys:
+
+- On every `Elapsed`, Start/Stop (button or tray), interval change, and in `ExitApp()`
+  (*before* the engine is stopped) → `PersistRunState()` writes `IsRunning` (bool) and
+  `NextFireUtcTicks` (long).
+- On launch (`RestoreRunState()`), if `IsRunning` was true and `NextFireUtcTicks` is still in
+  the future → `_engine.ResumeAt(next)`; if it's already past → `_engine.Start()` fresh;
+  otherwise honour `AutoStart`.
+
+So quitting mid-countdown (✕ or tray **Exit**) and relaunching picks up where it left off.
+
+### Transparent background (`TransparentBackdrop`)
+
+"Transparent background" (`TimerSettings.TransparentBackground`, default **off**) swaps
+`Root.Background` between the `#EE1B1B1F` panel and `Transparent`, and sets
+`Window.SystemBackdrop` to a `TransparentBackdrop` (or back to `null`).
+
+Windows App SDK has Mica/Acrylic backdrops but no fully transparent one, so
+`TransparentBackdrop` is a custom `SystemBackdrop` (same technique as WinUIEx's
+`TransparentTintBackdrop`). A transparent composition brush alone still renders **black** —
+the HWND's redirection surface is opaque — so on connect it also:
+
+1. `DwmEnableBlurBehindWindow` with an off-screen 1×1 region — turns on per-pixel alpha in DWM
+   without actually blurring anything.
+2. Subclasses the window (`SetWindowSubclass`) and answers `WM_ERASEBKGND` by filling the
+   client rect with a black GDI brush (alpha 0 = clear); re-applies the DWM config on
+   `WM_DWMCOMPOSITIONCHANGED`.
+
+Disconnect undoes all of it (removes the subclass, disables blur-behind, frees the GDI brush).
+
 ### Settings flow
 
 `LoadSettings()` runs in the ctor with a `_loading` guard so populating the controls doesn't
 trigger their change handlers. Each control handler (`OnIntervalChanged`, `OnSoundChanged`,
-`OnVolumeChanged`, `OnAutoStartChanged`) updates `_settings` + the engine and calls
+`OnVolumeChanged`, `OnTransparentChanged`, `OnAutoStartChanged`) updates `_settings` + the engine and calls
 `SaveSettings()` → `TimerSettings.Save(_store)`. There's no explicit "save" — every change is
 written immediately.
 
 ### UI map (`MainWindow.xaml`)
 
 ```
-Root Grid  (#EE1B1B1F — near-opaque dark)
+Root Grid  (Background swapped Transparent <-> #EE1B1B1F at runtime)
 ├─ TaskbarIcon (H.NotifyIcon)   context menu: Start/Stop · Show/hide · Exit
-└─ Grid
+└─ ContentGrid (measured by ResizeToFitContent)
    ├─ Header  (drag strip)      "INTERVAL TIMER"  ⚙(toggle)  –(hide)  ✕(quit)
    ├─ Countdown row             CountdownText (Consolas 34)   Start/Stop button
-   └─ SettingsPanel (collapsed) NumberBox interval · ComboBox sound · Slider volume + Test · AutoStart check
+   └─ SettingsPanel (collapsed) NumberBox interval · ComboBox sound · Slider volume + Test
+                                · Transparent background check · AutoStart check
 ```
+
+The sound `ComboBox` has no `DisplayMemberPath` — like the widget it relies on
+`SoundInfo.ToString()`, which keeps it working under trimming.
 
 Button glyphs are Segoe MDL2 Assets: `E713` gear, `E921` hide, `E8BB` close.
 
@@ -121,13 +162,14 @@ Button glyphs are Segoe MDL2 Assets: `E713` gear, `E921` hide, `E8BB` close.
 throws without package identity.
 
 - Holds a `Dictionary<string, JsonElement>`; loads on construction (corrupt file → start empty).
-- `TryGet` maps `JsonValueKind` → `double` / `bool` / `string` (numbers always come back as
-  `double`; `TimerSettings` and the position restore use `Convert.*` with `InvariantCulture`).
+- `TryGet` maps `JsonValueKind` → `long` (integral numbers, so `NextFireUtcTicks` keeps full
+  precision) / `double` / `bool` / `string`; `TimerSettings` and the position restore use
+  `Convert.*` with `InvariantCulture`.
 - `Set` writes the whole dictionary to disk on every call (try/catch — a locked file keeps the
   in-memory value).
 - Serialization goes through **`SettingsJsonContext`**, a `[JsonSerializable]`
   source-generated `JsonSerializerContext` (for `Dictionary<string, JsonElement>` +
-  `int`/`double`/`bool`/`string`). No runtime reflection → the app is trim/AOT-safe, so
+  `int`/`long`/`double`/`bool`/`string`). No runtime reflection → the app is trim/AOT-safe, so
   `PublishTrimmed=true` can be re-enabled for a smaller `-Portable` build (validate per build).
 
 ## `MediaSoundPlayer`

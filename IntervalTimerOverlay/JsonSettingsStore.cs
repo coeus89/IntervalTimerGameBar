@@ -47,7 +47,11 @@ namespace IntervalTimerOverlay
             {
                 switch (el.ValueKind)
                 {
-                    case JsonValueKind.Number: value = el.GetDouble(); return true;
+                    // Integers come back as long so tick counts (NextFireUtcTicks) keep full
+                    // precision - a double only holds 53 bits.
+                    case JsonValueKind.Number:
+                        value = el.TryGetInt64(out var l) ? l : el.GetDouble();
+                        return true;
                     case JsonValueKind.True:
                     case JsonValueKind.False: value = el.GetBoolean(); return true;
                     case JsonValueKind.String: value = el.GetString() ?? string.Empty; return true;
@@ -59,7 +63,7 @@ namespace IntervalTimerOverlay
 
         public void Set(string key, object value)
         {
-            // ISettingsStore only ever stores int/double/bool/string - all registered on the context.
+            // ISettingsStore only ever stores int/long/double/bool/string - all registered on the context.
             _values[key] = JsonSerializer.SerializeToElement(
                 value, value?.GetType() ?? typeof(string), SettingsJsonContext.Default);
             try
@@ -77,6 +81,7 @@ namespace IntervalTimerOverlay
     [JsonSourceGenerationOptions(WriteIndented = true)]
     [JsonSerializable(typeof(Dictionary<string, JsonElement>))]
     [JsonSerializable(typeof(int))]
+    [JsonSerializable(typeof(long))]
     [JsonSerializable(typeof(double))]
     [JsonSerializable(typeof(bool))]
     [JsonSerializable(typeof(string))]

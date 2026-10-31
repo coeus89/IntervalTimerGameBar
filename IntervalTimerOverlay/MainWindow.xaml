@@ -10,6 +10,7 @@
     mc:Ignorable="d"
     Title="Interval Timer">
 
+    <!-- Root.Background is switched between Transparent and a solid panel at runtime -->
     <Grid x:Name="Root" Background="#EE1B1B1F">
         <tb:TaskbarIcon
             x:Name="TrayIcon"
@@ -24,7 +25,7 @@
             </tb:TaskbarIcon.ContextFlyout>
         </tb:TaskbarIcon>
 
-        <Grid Padding="10" RowSpacing="6">
+        <Grid x:Name="ContentGrid" Padding="10" RowSpacing="6">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -73,7 +74,7 @@
                                SpinButtonPlacementMode="Inline" ValueChanged="OnIntervalChanged" />
                 </Grid>
                 <ComboBox x:Name="SoundBox" Header="Sound" HorizontalAlignment="Stretch"
-                          DisplayMemberPath="DisplayName" SelectionChanged="OnSoundChanged" />
+                          SelectionChanged="OnSoundChanged" />
                 <Grid ColumnSpacing="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
@@ -83,6 +84,8 @@
                             ValueChanged="OnVolumeChanged" />
                     <Button Grid.Column="1" Content="Test" VerticalAlignment="Bottom" Click="OnTestSound" />
                 </Grid>
+                <CheckBox x:Name="TransparentCheck" Content="Transparent background"
+                          Checked="OnTransparentChanged" Unchecked="OnTransparentChanged" />
                 <CheckBox x:Name="AutoStartCheck" Content="Start timer when app opens"
                           Checked="OnAutoStartChanged" Unchecked="OnAutoStartChanged" />
             </StackPanel>
