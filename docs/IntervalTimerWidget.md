@@ -185,6 +185,27 @@ RootGrid  (Background swapped Transparent <-> #EE1B1B1F at runtime)
       └─ [ ] Start timer when widget opens
 ```
 
+### Keyboard focus for text entry (`IntervalBox`, `SpeechTextBox`)
+
+Game Bar can leave real OS keyboard focus on the hosting game even while a pinned widget's
+pointer-driven controls (buttons, sliders, combo boxes) keep working normally. Mouse clicks are
+delivered to whatever window is under the cursor purely by hit-testing, but typed characters
+(`WM_CHAR`) are only delivered to whichever window currently owns keyboard focus — and the
+`XboxGameBarWidget` handshake doesn't always hand that back to the widget just because XAML
+thinks a `TextBox` has focus. The symptom is exactly what it looks like from the outside: the
+"+/-" interval buttons work fine, but typing digits into the interval box (or the announcement
+phrase box) silently does nothing.
+
+Fix: both text-entry boxes handle `PointerPressed` → `Window.Current.Activate()` to force Windows
+to hand keyboard focus back to the widget's window on every tap/click, before the user starts
+typing (`OnTextEntryPointerPressed` in `WidgetPage.xaml.cs`). They also `SelectAll()` on
+`GotFocus` so a single tap + type replaces the old value. See Microsoft's
+[click-through guide](https://learn.microsoft.com/en-us/xbox/game-bar/guide/click-through) for
+the related (but distinct) scenario of pinned widgets losing *all* input when click-through is
+enabled by the user — that case is still a real limitation (there is no API to opt out of
+click-through; the mitigation there is to hide/disable controls while `ClickThroughEnabled` is
+true, which this widget does not yet do).
+
 ### Custom sounds
 
 `CustomSoundStore` imports one user-picked audio file (`.wav .mp3 .m4a .aac .wma .flac`) into

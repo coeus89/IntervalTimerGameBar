@@ -341,12 +341,35 @@ namespace IntervalTimerWidget
         private void OnIntervalKeyDown(object sender, KeyRoutedEventArgs e)
         {
             if (e.Key == Windows.System.VirtualKey.Enter)
+            {
                 CommitInterval(CurrentIntervalInput());
+                e.Handled = true;
+            }
         }
 
         private void OnIntervalUp(object sender, RoutedEventArgs e) => CommitInterval(CurrentIntervalInput() + 1);
 
         private void OnIntervalDown(object sender, RoutedEventArgs e) => CommitInterval(CurrentIntervalInput() - 1);
+
+        /// <summary>
+        /// Game Bar can leave real OS keyboard focus on the hosting game even while a pinned
+        /// widget's pointer-driven controls (buttons, sliders) keep working fine - mouse
+        /// clicks are delivered by hit-testing alone, but typed characters are only delivered
+        /// to whichever window currently owns keyboard focus. That mismatch is what makes the
+        /// "+/-" buttons work while typing into a text box silently does nothing.
+        /// Re-activating our window on every tap/click into a text entry forces Windows to
+        /// hand keyboard focus back to the widget before the user starts typing.
+        /// See: https://learn.microsoft.com/en-us/xbox/game-bar/guide/click-through
+        /// </summary>
+        private void OnTextEntryPointerPressed(object sender, PointerRoutedEventArgs e)
+        {
+            try { Window.Current?.Activate(); } catch { /* best-effort */ }
+        }
+
+        private void OnTextEntryGotFocus(object sender, RoutedEventArgs e)
+        {
+            (sender as TextBox)?.SelectAll();
+        }
 
         private void OnSoundChanged(object sender, SelectionChangedEventArgs e)
         {
