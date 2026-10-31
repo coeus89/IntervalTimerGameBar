@@ -51,7 +51,8 @@
                             <RepeatButton Grid.Column="0" Content="&#x2212;" Width="36" Click="OnIntervalDown" />
                             <TextBox x:Name="IntervalBox" Grid.Column="1" Text="60"
                                      InputScope="Number" TextAlignment="Center"
-                                     LostFocus="OnIntervalCommitted" KeyDown="OnIntervalKeyDown" />
+                                     LostFocus="OnIntervalCommitted" KeyDown="OnIntervalKeyDown"
+                                     PointerPressed="OnTextEntryPointerPressed" GotFocus="OnTextEntryGotFocus" />
                             <RepeatButton Grid.Column="2" Content="+" Width="36" Click="OnIntervalUp" />
                         </Grid>
                     </StackPanel>
@@ -94,7 +95,8 @@
                         <ComboBox x:Name="VoiceBox" HorizontalAlignment="Stretch"
                                   SelectionChanged="OnVoiceChanged" />
                         <TextBox x:Name="SpeechTextBox" LostFocus="OnSpeechTextCommitted"
-                                 TextChanged="OnSpeechTextChanged" />
+                                 TextChanged="OnSpeechTextChanged"
+                                 PointerPressed="OnTextEntryPointerPressed" GotFocus="OnTextEntryGotFocus" />
                         <TextBlock Text="Tokens: {interval}, {count}, {time}" FontSize="11" Opacity="0.6" />
                         <StackPanel>
                             <TextBlock Text="Speaking rate" FontSize="12" Opacity="0.7" />
