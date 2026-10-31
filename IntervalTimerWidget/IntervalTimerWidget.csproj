@@ -120,6 +120,9 @@
     <Compile Include="..\IntervalTimer.Core\AnnouncementFormatter.cs">
       <Link>Core\AnnouncementFormatter.cs</Link>
     </Compile>
+    <Compile Include="..\IntervalTimer.Core\FlatSettingsJson.cs">
+      <Link>Core\FlatSettingsJson.cs</Link>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">

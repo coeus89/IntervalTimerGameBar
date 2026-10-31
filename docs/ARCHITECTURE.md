@@ -79,7 +79,7 @@ Events fire on a thread-pool thread; each front end marshals to its own UI dispa
 | App | `ISettingsStore` impl | Backing store |
 | --- | --- | --- |
 | Overlay | `JsonSettingsStore` | `%LOCALAPPDATA%\IntervalTimerOverlay\settings.json` |
-| Widget | `AppDataSettingsStore` | `Windows.Storage.ApplicationData.Current.LocalSettings` |
+| Widget | `AppDataSettingsStore` | `ApplicationData.LocalFolder\settings.json` (migrates `LocalSettings` once) |
 | Tests | in-memory dictionary | — |
 
 The overlay uses a JSON file specifically because it runs **unpackaged** — `ApplicationData`

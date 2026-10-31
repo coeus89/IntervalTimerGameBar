@@ -149,6 +149,8 @@ namespace IntervalTimerWidget
 
         private void OnUnloaded(object sender, RoutedEventArgs e)
         {
+            CommitSpeechText();
+            SaveSettings();
             PersistRunState();
             _engine.Dispose();
             _alert.Dispose();
@@ -419,7 +421,17 @@ namespace IntervalTimerWidget
             SaveSettings();
         }
 
+        private void OnSpeechTextChanged(object sender, TextChangedEventArgs e) => CommitSpeechText();
+
         private void OnSpeechTextCommitted(object sender, RoutedEventArgs e)
+        {
+            CommitSpeechText();
+            if (_loading) return;
+            if (string.IsNullOrWhiteSpace(SpeechTextBox.Text))
+                SpeechTextBox.Text = _settings.SpeechText;
+        }
+
+        private void CommitSpeechText()
         {
             if (_loading) return;
             var text = SpeechTextBox.Text;

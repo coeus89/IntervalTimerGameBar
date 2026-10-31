@@ -93,7 +93,8 @@
                                   SelectionChanged="OnAnnouncementModeChanged" />
                         <ComboBox x:Name="VoiceBox" HorizontalAlignment="Stretch"
                                   SelectionChanged="OnVoiceChanged" />
-                        <TextBox x:Name="SpeechTextBox" LostFocus="OnSpeechTextCommitted" />
+                        <TextBox x:Name="SpeechTextBox" LostFocus="OnSpeechTextCommitted"
+                                 TextChanged="OnSpeechTextChanged" />
                         <TextBlock Text="Tokens: {interval}, {count}, {time}" FontSize="11" Opacity="0.6" />
                         <StackPanel>
                             <TextBlock Text="Speaking rate" FontSize="12" Opacity="0.7" />

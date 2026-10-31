@@ -21,7 +21,7 @@ Both apps save your preferences so they're remembered between launches:
 | App | What's stored | Where |
 | --- | --- | --- |
 | Overlay | interval length, selected sound, volume, auto-start flag, transparent-background flag, window position | `%LOCALAPPDATA%\IntervalTimerOverlay\settings.json` (plain JSON, on your machine only) |
-| Widget | interval length, selected sound, volume, auto-start flag, announcement mode, spoken-phrase template, voice choice, speaking rate | Windows' per-app `ApplicationData.LocalSettings` store (isolated to the widget's own package, on your machine only) |
+| Widget | interval length, selected sound, volume, auto-start flag, announcement mode, spoken-phrase template, voice choice, speaking rate, whether the timer was running | `settings.json` in the widget's local app data (isolated to the widget's own package, on your machine only) |
 | Widget (optional) | any audio file you choose to import as a custom sound | Windows' per-app local storage (`LocalFolder\Sounds`, isolated to the widget's own package) |
 
 None of these fields identify you personally — they're timer configuration (and, if you import

@@ -48,7 +48,7 @@ deprecated" build message is expected — it still receives security/reliability
 | --- | --- |
 | `App.xaml` / `App.xaml.cs` | Game Bar protocol activation, `XboxGameBarWidget` lifetime |
 | `WidgetPage.xaml` / `.cs` | the widget UI + timer wiring |
-| `AppDataSettingsStore.cs` | `ISettingsStore` over `ApplicationData.LocalSettings` |
+| `AppDataSettingsStore.cs` | `ISettingsStore` over `LocalFolder\settings.json` |
 | `UwpSoundPlayer.cs` | `ISoundPlayer` via `Windows.Media.Playback.MediaPlayer`, plus `PlayAndWaitAsync` |
 | `CustomSoundStore.cs` | imports/lists/deletes user sound files under `LocalFolder\Sounds` |
 | `ISpeechProvider.cs` / `WindowsSpeechProvider.cs` | text-to-speech seam; offline `SpeechSynthesizer` impl |
@@ -248,9 +248,13 @@ higher-quality neural voices; that's out of scope for now.
 
 ## `AppDataSettingsStore`
 
-Thin wrapper over `Windows.Storage.ApplicationData.Current.LocalSettings.Values` — a WinRT
-property set that natively stores `int` / `double` / `bool` / `string`, exactly what
-`ISettingsStore` needs. No file handling, no identity problem (the widget is always packaged).
+Writes `settings.json` in `ApplicationData.Current.LocalFolder` (same local app-data folder as
+imported sounds). Every `Set` rewrites the file, so interval, sound, volume, announcement mode,
+spoken phrase, voice, speaking rate, and the running countdown all come back on the next launch.
+Integers are stored as JSON integers (not doubles) so `NextFireUtcTicks` keeps full precision.
+
+If the file is missing, existing `LocalSettings` values are copied in once. After that the file
+is the source of truth.
 
 ## `UwpSoundPlayer`
 
