@@ -49,7 +49,11 @@ deprecated" build message is expected — it still receives security/reliability
 | `App.xaml` / `App.xaml.cs` | Game Bar protocol activation, `XboxGameBarWidget` lifetime |
 | `WidgetPage.xaml` / `.cs` | the widget UI + timer wiring |
 | `AppDataSettingsStore.cs` | `ISettingsStore` over `ApplicationData.LocalSettings` |
-| `UwpSoundPlayer.cs` | `ISoundPlayer` via `Windows.Media.Playback.MediaPlayer` |
+| `UwpSoundPlayer.cs` | `ISoundPlayer` via `Windows.Media.Playback.MediaPlayer`, plus `PlayAndWaitAsync` |
+| `CustomSoundStore.cs` | imports/lists/deletes user sound files under `LocalFolder\Sounds` |
+| `ISpeechProvider.cs` / `WindowsSpeechProvider.cs` | text-to-speech seam; offline `SpeechSynthesizer` impl |
+| `VoiceOption.cs` | one selectable TTS voice for the UI |
+| `AlertPlayer.cs` | plays sound and/or speech per `TimerSettings.AnnouncementMode` |
 | `Package.appxmanifest` | the widget declaration + proxy/stub registration |
 | `Properties/AssemblyInfo.cs` | assembly attributes (non-SDK projects need this explicitly) |
 | `Properties/Default.rd.xml` | .NET Native runtime directives (minimal) |
@@ -170,13 +174,54 @@ Plain UWP controls only (no WinUI 2 `NumberBox`):
 RootGrid  (Background swapped Transparent <-> #EE1B1B1F at runtime)
 └─ Grid
    ├─ Header           CountdownText (Consolas 40)   Start/Stop   ⚙ SettingsToggle
-   └─ SettingsPanel  (collapsed by default; ⚙ toggles it)
+   └─ SettingsPanel  (ScrollViewer, collapsed by default; ⚙ toggles it)
       ├─ Interval        [ − ]  TextBox (InputScope Number)  [ + ]
-      ├─ Sound           ComboBox (bound to SoundCatalog.All)   Test
+      ├─ Sound           ComboBox (built-ins + imports)   Test
+      │                  Import sound file...   Remove (custom sounds only)
       ├─ Volume          Slider 0–100
+      ├─ Announcement    mode ComboBox, voice ComboBox, phrase TextBox,
+      │                  speaking-rate Slider, Test announcement
       ├─ [ ] Transparent background
       └─ [ ] Start timer when widget opens
 ```
+
+### Custom sounds
+
+`CustomSoundStore` imports user-picked audio files (`.wav .mp3 .m4a .aac .wma .flac`, capped at
+5 MB) into `ApplicationData.Current.LocalFolder\Sounds` via `FileOpenPicker` + `StorageFile.CopyAsync`.
+That folder is the only source of truth — there's no separate index — so `ListAsync()` just
+enumerates it. `SoundCatalog.Custom(fileName)` builds the catalog entry (key `"custom:<fileName>"`);
+`SoundInfo.PlaybackUri` resolves custom sounds to `ms-appdata:///local/Sounds/<fileName>` instead of
+the packaged `ms-appx:///Assets/Sounds/<fileName>` used for built-ins. `TimerSettings.Normalize()`
+leaves a `custom:` key alone (unlike a built-in key, it can't be validated without knowing which
+files currently exist); `SoundCatalog.Resolve(key, customSounds)` falls back to `Default` at
+load/playback time if the file was deleted.
+
+**Known risk:** the file picker's behavior inside the Game Bar overlay (vs. running standalone from
+the Start menu) hasn't been verified on real hardware — pickers can behave oddly when hosted inside
+another app's overlay surface. Test `Import sound file...` both ways.
+
+### Text-to-speech announcements
+
+`TimerSettings.AnnouncementMode` picks between `Sound` (default, unchanged behavior), `Speech`, or
+`SoundThenSpeech`. `AlertPlayer` (in the widget project) orchestrates the two: it plays through the
+existing `UwpSoundPlayer`/`MediaPlayer`, and — when speech is involved — synthesizes the configured
+`SpeechText` template via `ISpeechProvider` and plays the result through a second, dedicated
+`MediaPlayer` so sound and speech never fight over one player's `Source`. In `SoundThenSpeech` mode,
+`UwpSoundPlayer.PlayAndWaitAsync` waits for the sound's `MediaEnded` (or a 3-second timeout) before
+speaking.
+
+`AnnouncementFormatter` (in `IntervalTimer.Core`, pure string logic, unit-tested) expands the
+template's tokens — `{interval}` (humanized, e.g. "1 minute 30 seconds"), `{count}` (announcements
+since the timer was last started), `{time}` (local clock) — before handing the literal text to the
+speech provider.
+
+`WindowsSpeechProvider` is the only implementation today: it wraps the offline, built-in
+`Windows.Media.SpeechSynthesis.SpeechSynthesizer` (`SpeechSynthesizer.AllVoices`), needs no network
+and no manifest capability. It only sees the classic OneCore voices (David, Zira, Mark, plus any
+installed language packs) — Narrator's newer "Natural" voices aren't exposed through this public
+WinRT API. A cloud provider (e.g. Azure Speech) could implement `ISpeechProvider` the same way for
+higher-quality neural voices; that's out of scope for now.
 
 - **Collapsed by default** so the settings aren't on screen during a game — only the
   countdown + Start/Stop show. The ⚙ `ToggleButton` expands/collapses `SettingsPanel`, then

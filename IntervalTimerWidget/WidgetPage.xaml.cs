@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
+using System.Threading.Tasks;
 using IntervalTimer.Core;
 using Microsoft.Gaming.XboxGameBar;
 using Windows.Foundation;
@@ -29,13 +32,26 @@ namespace IntervalTimerWidget
             new SolidColorBrush(Color.FromArgb(0xEE, 0x1B, 0x1B, 0x1F));
         private static readonly Brush ClearBrush = new SolidColorBrush(Colors.Transparent);
 
+        /// <summary>Friendly labels for <see cref="AnnouncementMode"/>, in display order.</summary>
+        private static readonly AnnouncementModeItem[] AnnouncementModeItems =
+        {
+            new AnnouncementModeItem(AnnouncementMode.Sound, "Sound only"),
+            new AnnouncementModeItem(AnnouncementMode.Speech, "Speak only"),
+            new AnnouncementModeItem(AnnouncementMode.SoundThenSpeech, "Sound, then speak"),
+        };
+
         private readonly AppDataSettingsStore _store = new AppDataSettingsStore();
         private readonly IntervalTimerEngine _engine = new IntervalTimerEngine();
         private readonly UwpSoundPlayer _sound = new UwpSoundPlayer();
+        private readonly CustomSoundStore _customSounds = new CustomSoundStore();
+        private readonly WindowsSpeechProvider _speechProvider = new WindowsSpeechProvider();
+        private readonly AlertPlayer _alert;
 
         private XboxGameBarWidget _widget;
         private TimerSettings _settings = new TimerSettings();
+        private IReadOnlyList<SoundInfo> _availableSounds = Array.Empty<SoundInfo>();
         private bool _loading;
+        private int _announceCount;
 
         public WidgetPage()
         {
@@ -43,12 +59,31 @@ namespace IntervalTimerWidget
             this.Loaded += OnLoaded;
             this.Unloaded += OnUnloaded;
 
+            _alert = new AlertPlayer(_sound, _speechProvider);
+
             _engine.Tick += (s, e) => RunOnUi(() => UpdateUi(e.Remaining, e.IsRunning));
-            _engine.Elapsed += (s, e) => RunOnUi(() =>
+            _engine.Elapsed += (s, e) => RunOnUi(async () =>
             {
-                _sound.Play(_settings.Sound, _settings.Volume);
+                _announceCount++;
+                var context = new AnnouncementContext(_engine.Interval, _announceCount, DateTime.Now);
+                await _alert.PlayAsync(_settings, context);
                 PersistRunState();
             });
+        }
+
+        /// <summary>Wraps an <see cref="AnnouncementMode"/> with a user-facing label for the ComboBox.</summary>
+        private sealed class AnnouncementModeItem
+        {
+            public AnnouncementModeItem(AnnouncementMode mode, string label)
+            {
+                Mode = mode;
+                Label = label;
+            }
+
+            public AnnouncementMode Mode { get; }
+            public string Label { get; }
+
+            public override string ToString() => Label;
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -57,20 +92,32 @@ namespace IntervalTimerWidget
             _widget = e.Parameter as XboxGameBarWidget;
         }
 
-        private void OnLoaded(object sender, RoutedEventArgs e)
+        private async void OnLoaded(object sender, RoutedEventArgs e)
         {
             _loading = true;
             _settings = TimerSettings.Load(_store);
 
             IntervalBox.Text = _settings.IntervalSeconds.ToString(CultureInfo.InvariantCulture);
             VolumeSlider.Value = _settings.Volume * 100.0;
-            SoundBox.ItemsSource = SoundCatalog.All;
-            SoundBox.SelectedItem = _settings.Sound;
             TransparentCheck.IsChecked = _settings.TransparentBackground;
             AutoStartCheck.IsChecked = _settings.AutoStart;
 
+            AnnouncementModeBox.ItemsSource = AnnouncementModeItems;
+            AnnouncementModeBox.SelectedItem =
+                AnnouncementModeItems.FirstOrDefault(i => i.Mode == _settings.AnnouncementMode) ?? AnnouncementModeItems[0];
+
+            VoiceBox.ItemsSource = _speechProvider.Voices;
+            VoiceBox.SelectedItem =
+                _speechProvider.Voices.FirstOrDefault(v => v.Id == _settings.VoiceId) ?? _speechProvider.Voices.FirstOrDefault();
+
+            SpeechTextBox.Text = _settings.SpeechText;
+            SpeechRateSlider.Value = _settings.SpeechRate * 100.0;
+            UpdateSpeechControlsEnabled();
+
             _engine.IntervalSeconds = _settings.IntervalSeconds;
             _loading = false;
+
+            await LoadSoundsAsync();
 
             ApplyBackground();
             // Start collapsed so the settings aren't on screen during a game.
@@ -104,7 +151,40 @@ namespace IntervalTimerWidget
         {
             PersistRunState();
             _engine.Dispose();
+            _alert.Dispose();
             _sound.Dispose();
+            _speechProvider.Dispose();
+        }
+
+        /// <summary>Re-reads the custom-sounds folder and rebuilds the sound ComboBox (built-ins first, then imports).</summary>
+        private async Task LoadSoundsAsync()
+        {
+            IReadOnlyList<SoundInfo> custom;
+            try { custom = await _customSounds.ListAsync(); }
+            catch { custom = Array.Empty<SoundInfo>(); }
+
+            _availableSounds = SoundCatalog.All.Concat(custom).ToList();
+
+            _loading = true;
+            SoundBox.ItemsSource = _availableSounds;
+            SoundBox.SelectedItem = SoundCatalog.Resolve(_settings.SoundKey, custom);
+            _loading = false;
+
+            UpdateDeleteSoundButtonState();
+        }
+
+        private void UpdateDeleteSoundButtonState()
+        {
+            var selected = SoundBox.SelectedItem as SoundInfo;
+            DeleteSoundButton.IsEnabled = selected != null && selected.IsCustom;
+        }
+
+        private void UpdateSpeechControlsEnabled()
+        {
+            var enabled = _settings.AnnouncementMode != AnnouncementMode.Sound;
+            VoiceBox.IsEnabled = enabled;
+            SpeechTextBox.IsEnabled = enabled;
+            SpeechRateSlider.IsEnabled = enabled;
         }
 
         private void RunOnUi(Action action)
@@ -220,6 +300,7 @@ namespace IntervalTimerWidget
 
         private void OnStartStop(object sender, RoutedEventArgs e)
         {
+            if (!_engine.IsRunning) _announceCount = 0;
             _engine.Toggle();
             PersistRunState();
         }
@@ -267,6 +348,7 @@ namespace IntervalTimerWidget
             if (_loading || s == null) return;
             _settings.SoundKey = s.Key;
             SaveSettings();
+            UpdateDeleteSoundButtonState();
         }
 
         private void OnVolumeChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
@@ -277,6 +359,85 @@ namespace IntervalTimerWidget
         }
 
         private void OnTestSound(object sender, RoutedEventArgs e) =>
-            _sound.Play(_settings.Sound, _settings.Volume);
+            _sound.Play(SoundBox.SelectedItem as SoundInfo ?? _settings.Sound, _settings.Volume);
+
+        private async void OnImportSound(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var imported = await _customSounds.ImportAsync();
+                if (imported == null) return; // user cancelled the picker
+
+                await LoadSoundsAsync();
+
+                _loading = true;
+                SoundBox.SelectedItem = _availableSounds.FirstOrDefault(s => s.Key == imported.Key);
+                _loading = false;
+
+                _settings.SoundKey = imported.Key;
+                SaveSettings();
+                UpdateDeleteSoundButtonState();
+                ResizeToFitContent();
+            }
+            catch
+            {
+                // Best-effort: a rejected/too-large file just leaves the list unchanged.
+            }
+        }
+
+        private async void OnDeleteSound(object sender, RoutedEventArgs e)
+        {
+            var selected = SoundBox.SelectedItem as SoundInfo;
+            if (selected == null || !selected.IsCustom) return;
+
+            await _customSounds.DeleteAsync(selected);
+
+            if (string.Equals(_settings.SoundKey, selected.Key, StringComparison.OrdinalIgnoreCase))
+            {
+                _settings.SoundKey = SoundCatalog.Default.Key;
+                SaveSettings();
+            }
+
+            await LoadSoundsAsync();
+            ResizeToFitContent();
+        }
+
+        private void OnAnnouncementModeChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var item = AnnouncementModeBox.SelectedItem as AnnouncementModeItem;
+            if (_loading || item == null) return;
+            _settings.AnnouncementMode = item.Mode;
+            SaveSettings();
+            UpdateSpeechControlsEnabled();
+        }
+
+        private void OnVoiceChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var voice = VoiceBox.SelectedItem as VoiceOption;
+            if (_loading || voice == null) return;
+            _settings.VoiceId = voice.Id;
+            SaveSettings();
+        }
+
+        private void OnSpeechTextCommitted(object sender, RoutedEventArgs e)
+        {
+            if (_loading) return;
+            var text = SpeechTextBox.Text;
+            _settings.SpeechText = string.IsNullOrWhiteSpace(text) ? AnnouncementFormatter.DefaultTemplate : text;
+            SaveSettings();
+        }
+
+        private void OnSpeechRateChanged(object sender, Windows.UI.Xaml.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+        {
+            if (_loading) return;
+            _settings.SpeechRate = e.NewValue / 100.0;
+            SaveSettings();
+        }
+
+        private async void OnTestAnnouncement(object sender, RoutedEventArgs e)
+        {
+            var context = new AnnouncementContext(_engine.Interval, Math.Max(_announceCount, 1), DateTime.Now);
+            await _alert.PlayAsync(_settings, context);
+        }
     }
 }

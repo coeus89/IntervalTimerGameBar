@@ -16,6 +16,10 @@ namespace IntervalTimer.Core.Tests
             Assert.Equal(TimerSettings.DefaultVolume, s.Volume);
             Assert.False(s.AutoStart);
             Assert.False(s.TransparentBackground);
+            Assert.Equal(AnnouncementMode.Sound, s.AnnouncementMode);
+            Assert.Equal(AnnouncementFormatter.DefaultTemplate, s.SpeechText);
+            Assert.Equal(string.Empty, s.VoiceId);
+            Assert.Equal(TimerSettings.DefaultSpeechRate, s.SpeechRate);
         }
 
         [Fact]
@@ -29,6 +33,10 @@ namespace IntervalTimer.Core.Tests
                 Volume = 0.33,
                 AutoStart = true,
                 TransparentBackground = true,
+                AnnouncementMode = AnnouncementMode.SoundThenSpeech,
+                SpeechText = "{count}: {interval} elapsed, it's {time}",
+                VoiceId = "Microsoft David Desktop",
+                SpeechRate = 1.25,
             };
 
             original.Save(store);
@@ -39,6 +47,37 @@ namespace IntervalTimer.Core.Tests
             Assert.Equal(0.33, loaded.Volume, 3);
             Assert.True(loaded.AutoStart);
             Assert.True(loaded.TransparentBackground);
+            Assert.Equal(AnnouncementMode.SoundThenSpeech, loaded.AnnouncementMode);
+            Assert.Equal("{count}: {interval} elapsed, it's {time}", loaded.SpeechText);
+            Assert.Equal("Microsoft David Desktop", loaded.VoiceId);
+            Assert.Equal(1.25, loaded.SpeechRate, 3);
+        }
+
+        [Fact]
+        public void Normalize_preserves_a_custom_sound_key()
+        {
+            var s = new TimerSettings { SoundKey = "custom:my-sound.mp3" };
+            s.Normalize();
+            Assert.Equal("custom:my-sound.mp3", s.SoundKey);
+        }
+
+        [Theory]
+        [InlineData(0.1, TimerSettings.MinSpeechRate)]
+        [InlineData(5.0, TimerSettings.MaxSpeechRate)]
+        [InlineData(1.25, 1.25)]
+        public void Normalize_clamps_speech_rate(double input, double expected)
+        {
+            var s = new TimerSettings { SpeechRate = input };
+            s.Normalize();
+            Assert.Equal(expected, s.SpeechRate, 3);
+        }
+
+        [Fact]
+        public void Normalize_restores_blank_speech_text_to_default()
+        {
+            var s = new TimerSettings { SpeechText = "   " };
+            s.Normalize();
+            Assert.Equal(AnnouncementFormatter.DefaultTemplate, s.SpeechText);
         }
 
         [Theory]

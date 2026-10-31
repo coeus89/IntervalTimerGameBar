@@ -21,16 +21,24 @@ Both apps save your preferences so they're remembered between launches:
 | App | What's stored | Where |
 | --- | --- | --- |
 | Overlay | interval length, selected sound, volume, auto-start flag, transparent-background flag, window position | `%LOCALAPPDATA%\IntervalTimerOverlay\settings.json` (plain JSON, on your machine only) |
-| Widget | interval length, selected sound, volume, auto-start flag | Windows' per-app `ApplicationData.LocalSettings` store (isolated to the widget's own package, on your machine only) |
+| Widget | interval length, selected sound, volume, auto-start flag, announcement mode, spoken-phrase template, voice choice, speaking rate | Windows' per-app `ApplicationData.LocalSettings` store (isolated to the widget's own package, on your machine only) |
+| Widget (optional) | any audio file you choose to import as a custom sound | Windows' per-app local storage (`LocalFolder\Sounds`, isolated to the widget's own package) |
 
-None of these fields identify you personally — they're timer configuration, nothing else.
-Nothing is logged, screenshotted, or recorded beyond this settings file.
+None of these fields identify you personally — they're timer configuration (and, if you import
+one, a sound file you chose yourself) — nothing else. Nothing is logged, screenshotted, or
+recorded beyond this settings file and any imported sound files.
+
+**Text-to-speech:** if you turn on spoken announcements, the widget's typed phrase is converted to
+audio entirely on your device using Windows' built-in, offline speech synthesis
+(`Windows.Media.SpeechSynthesis`). That text is never sent anywhere — there is no cloud speech
+service involved.
 
 **Removing this data:**
 - Overlay: `.\install-overlay.ps1 -Uninstall` deletes `settings.json` automatically (pass
   `-KeepSettings` to keep it instead), or delete the folder yourself at any time.
-- Widget: uninstalling it through Windows Settings removes its isolated settings storage
-  automatically, standard for all UWP/MSIX apps.
+- Widget: uninstalling it through Windows Settings removes its isolated settings storage and any
+  imported sound files automatically, standard for all UWP/MSIX apps. You can also remove an
+  individual imported sound yourself with the "Remove" button next to the sound picker.
 
 ## Network access
 

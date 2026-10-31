@@ -88,6 +88,11 @@
     </Compile>
     <Compile Include="AppDataSettingsStore.cs" />
     <Compile Include="UwpSoundPlayer.cs" />
+    <Compile Include="CustomSoundStore.cs" />
+    <Compile Include="VoiceOption.cs" />
+    <Compile Include="ISpeechProvider.cs" />
+    <Compile Include="WindowsSpeechProvider.cs" />
+    <Compile Include="AlertPlayer.cs" />
     <Compile Include="WidgetPage.xaml.cs">
       <DependentUpon>WidgetPage.xaml</DependentUpon>
     </Compile>
@@ -108,6 +113,12 @@
     </Compile>
     <Compile Include="..\IntervalTimer.Core\ISoundPlayer.cs">
       <Link>Core\ISoundPlayer.cs</Link>
+    </Compile>
+    <Compile Include="..\IntervalTimer.Core\AnnouncementMode.cs">
+      <Link>Core\AnnouncementMode.cs</Link>
+    </Compile>
+    <Compile Include="..\IntervalTimer.Core\AnnouncementFormatter.cs">
+      <Link>Core\AnnouncementFormatter.cs</Link>
     </Compile>
   </ItemGroup>
   <ItemGroup>

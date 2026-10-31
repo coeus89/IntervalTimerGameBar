@@ -34,51 +34,80 @@
                               ToolTipService.ToolTip="Settings" />
             </Grid>
 
-            <!-- Collapsible settings -->
-            <StackPanel x:Name="SettingsPanel" Grid.Row="1" Spacing="10" Visibility="Collapsed">
+            <!-- Collapsible settings; scrolls because the content can exceed the widget's max height -->
+            <ScrollViewer x:Name="SettingsPanel" Grid.Row="1" Visibility="Collapsed"
+                          MaxHeight="330" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Spacing="10">
 
-                <!-- Interval -->
-                <StackPanel>
-                    <TextBlock Text="Beep every (seconds)" FontSize="12" Opacity="0.7" />
-                    <Grid ColumnSpacing="6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" />
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <RepeatButton Grid.Column="0" Content="&#x2212;" Width="36" Click="OnIntervalDown" />
-                        <TextBox x:Name="IntervalBox" Grid.Column="1" Text="60"
-                                 InputScope="Number" TextAlignment="Center"
-                                 LostFocus="OnIntervalCommitted" KeyDown="OnIntervalKeyDown" />
-                        <RepeatButton Grid.Column="2" Content="+" Width="36" Click="OnIntervalUp" />
-                    </Grid>
+                    <!-- Interval -->
+                    <StackPanel>
+                        <TextBlock Text="Beep every (seconds)" FontSize="12" Opacity="0.7" />
+                        <Grid ColumnSpacing="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <RepeatButton Grid.Column="0" Content="&#x2212;" Width="36" Click="OnIntervalDown" />
+                            <TextBox x:Name="IntervalBox" Grid.Column="1" Text="60"
+                                     InputScope="Number" TextAlignment="Center"
+                                     LostFocus="OnIntervalCommitted" KeyDown="OnIntervalKeyDown" />
+                            <RepeatButton Grid.Column="2" Content="+" Width="36" Click="OnIntervalUp" />
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Sound -->
+                    <StackPanel>
+                        <TextBlock Text="Sound" FontSize="12" Opacity="0.7" />
+                        <Grid ColumnSpacing="6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ComboBox x:Name="SoundBox" Grid.Column="0" HorizontalAlignment="Stretch"
+                                      SelectionChanged="OnSoundChanged" />
+                            <Button Grid.Column="1" Content="Test" Click="OnTestSound" />
+                        </Grid>
+                        <Grid ColumnSpacing="6" Margin="0,6,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="ImportSoundButton" Grid.Column="0" Content="Import sound file..."
+                                    HorizontalAlignment="Stretch" Click="OnImportSound" />
+                            <Button x:Name="DeleteSoundButton" Grid.Column="1" Content="Remove" IsEnabled="False"
+                                    Click="OnDeleteSound" />
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Volume -->
+                    <StackPanel>
+                        <TextBlock Text="Volume" FontSize="12" Opacity="0.7" />
+                        <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" ValueChanged="OnVolumeChanged" />
+                    </StackPanel>
+
+                    <!-- Announcement (sound vs. speech on each interval boundary) -->
+                    <StackPanel Spacing="6">
+                        <TextBlock Text="Announcement" FontSize="12" Opacity="0.7" />
+                        <ComboBox x:Name="AnnouncementModeBox" HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnAnnouncementModeChanged" />
+                        <ComboBox x:Name="VoiceBox" HorizontalAlignment="Stretch"
+                                  SelectionChanged="OnVoiceChanged" />
+                        <TextBox x:Name="SpeechTextBox" LostFocus="OnSpeechTextCommitted" />
+                        <TextBlock Text="Tokens: {interval}, {count}, {time}" FontSize="11" Opacity="0.6" />
+                        <StackPanel>
+                            <TextBlock Text="Speaking rate" FontSize="12" Opacity="0.7" />
+                            <Slider x:Name="SpeechRateSlider" Minimum="50" Maximum="200" ValueChanged="OnSpeechRateChanged" />
+                        </StackPanel>
+                        <Button Content="Test announcement" Click="OnTestAnnouncement" />
+                    </StackPanel>
+
+                    <CheckBox x:Name="TransparentCheck" Content="Transparent background"
+                              Checked="OnTransparentChanged" Unchecked="OnTransparentChanged" />
+                    <CheckBox x:Name="AutoStartCheck" Content="Start timer when widget opens"
+                              Checked="OnAutoStartChanged" Unchecked="OnAutoStartChanged" />
                 </StackPanel>
-
-                <!-- Sound -->
-                <StackPanel>
-                    <TextBlock Text="Sound" FontSize="12" Opacity="0.7" />
-                    <Grid ColumnSpacing="6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*" />
-                            <ColumnDefinition Width="Auto" />
-                        </Grid.ColumnDefinitions>
-                        <ComboBox x:Name="SoundBox" Grid.Column="0" HorizontalAlignment="Stretch"
-                                  SelectionChanged="OnSoundChanged" />
-                        <Button Grid.Column="1" Content="Test" Click="OnTestSound" />
-                    </Grid>
-                </StackPanel>
-
-                <!-- Volume -->
-                <StackPanel>
-                    <TextBlock Text="Volume" FontSize="12" Opacity="0.7" />
-                    <Slider x:Name="VolumeSlider" Minimum="0" Maximum="100" ValueChanged="OnVolumeChanged" />
-                </StackPanel>
-
-                <CheckBox x:Name="TransparentCheck" Content="Transparent background"
-                          Checked="OnTransparentChanged" Unchecked="OnTransparentChanged" />
-                <CheckBox x:Name="AutoStartCheck" Content="Start timer when widget opens"
-                          Checked="OnAutoStartChanged" Unchecked="OnAutoStartChanged" />
-            </StackPanel>
+            </ScrollViewer>
         </Grid>
     </Grid>
 </Page>
